@@ -1,14 +1,15 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from '@jest/globals';
-import { createTestApp, createTestUser, generateToken } from '../helpers/testApp.js';
-import { db } from '../../src/models/database.js';
-
-const app = createTestApp();
+import { describe, it, expect, beforeEach } from '@jest/globals';
+import express from 'express';
+import { createTestApp, createTestUser, generateToken, db } from '../helpers/testApp';
+import { initializeDatabase } from '../helpers/testDb';
 
 describe('Auth API', () => {
+  let app: express.Application;
+
   beforeEach(() => {
-    // 清空用户数据
-    // 注意：由于lowdb是文件数据库，这里我们使用内存模拟
+    initializeDatabase();
+    app = createTestApp();
   });
 
   describe('POST /api/auth/register', () => {
@@ -69,7 +70,6 @@ describe('Auth API', () => {
     });
 
     it('should fail when email already exists', async () => {
-      // 先注册一个用户
       await request(app)
         .post('/api/auth/register')
         .send({
@@ -78,7 +78,6 @@ describe('Auth API', () => {
           name: 'First User',
         });
 
-      // 尝试使用相同邮箱注册
       const response = await request(app)
         .post('/api/auth/register')
         .send({
@@ -106,7 +105,6 @@ describe('Auth API', () => {
     });
 
     it('should assign member role to subsequent users', async () => {
-      // 先创建一个用户
       await createTestUser({ email: 'existing@example.com' });
 
       const response = await request(app)
@@ -124,7 +122,6 @@ describe('Auth API', () => {
 
   describe('POST /api/auth/login', () => {
     it('should login successfully with correct credentials', async () => {
-      // 先注册用户
       await request(app)
         .post('/api/auth/register')
         .send({
@@ -274,7 +271,6 @@ describe('Auth API', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
 
-      // 验证新密码可以登录
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
@@ -326,7 +322,6 @@ describe('Auth API', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.data)).toBe(true);
-      // 确保不返回密码
       response.body.data.forEach((u: any) => {
         expect(u.password).toBeUndefined();
       });

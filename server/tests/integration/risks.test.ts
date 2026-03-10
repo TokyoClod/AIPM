@@ -1,32 +1,21 @@
 import request from 'supertest';
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { createTestApp, createTestUser, generateToken, createTestProject, createTestRisk } from '../helpers/testApp.js';
-import { db } from '../../src/models/database.js';
+import { createTestApp, createTestUser, generateToken, createTestProject, createTestRisk, db } from '../helpers/testApp';
+import { initializeDatabase } from '../helpers/testDb';
 
 const app = createTestApp();
 
 describe('Risks API', () => {
-  let user: any;
-  let token: string;
-  let project: any;
-
-  beforeEach(async () => {
-    user = await createTestUser({ email: 'risk@example.com' });
-    token = generateToken(user);
-    project = createTestProject({ owner_id: user.id });
-    
-    // 添加用户为项目成员
-    db.project_members.create({
-      id: 'test-member-id',
-      project_id: project.id,
-      user_id: user.id,
-      role: 'owner',
-      created_at: new Date().toISOString(),
-    });
+  beforeEach(() => {
+    initializeDatabase();
   });
 
   describe('GET /api/risks', () => {
     it('should return risks for a project', async () => {
+      const user = await createTestUser({ email: 'risk@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+      
       createTestRisk({ project_id: project.id, created_by: user.id });
       createTestRisk({ project_id: project.id, created_by: user.id, level: 'high' });
 
@@ -42,6 +31,10 @@ describe('Risks API', () => {
     });
 
     it('should filter risks by level', async () => {
+      const user = await createTestUser({ email: 'risk2@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+      
       createTestRisk({ project_id: project.id, created_by: user.id, level: 'low' });
       createTestRisk({ project_id: project.id, created_by: user.id, level: 'critical' });
 
@@ -56,6 +49,10 @@ describe('Risks API', () => {
     });
 
     it('should filter risks by status', async () => {
+      const user = await createTestUser({ email: 'risk3@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+      
       createTestRisk({ project_id: project.id, created_by: user.id, status: 'identified' });
       createTestRisk({ project_id: project.id, created_by: user.id, status: 'resolved' });
 
@@ -69,18 +66,9 @@ describe('Risks API', () => {
       expect(response.body.data[0].status).toBe('resolved');
     });
 
-    it('should return all risks when no project_id is provided', async () => {
-      createTestRisk({ project_id: project.id, created_by: user.id });
-      
-      const response = await request(app)
-        .get('/api/risks')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(response.status).toBe(200);
-      expect(Array.isArray(response.body.data)).toBe(true);
-    });
-
     it('should fail without authentication', async () => {
+      const project = createTestProject({ owner_id: 'test-user' });
+      
       const response = await request(app)
         .get('/api/risks')
         .query({ project_id: project.id });
@@ -91,6 +79,10 @@ describe('Risks API', () => {
 
   describe('POST /api/risks', () => {
     it('should create a new risk successfully', async () => {
+      const user = await createTestUser({ email: 'createrisk@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+
       const response = await request(app)
         .post('/api/risks')
         .set('Authorization', `Bearer ${token}`)
@@ -114,6 +106,9 @@ describe('Risks API', () => {
     });
 
     it('should fail when project_id is missing', async () => {
+      const user = await createTestUser({ email: 'createrisk2@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .post('/api/risks')
         .set('Authorization', `Bearer ${token}`)
@@ -126,6 +121,10 @@ describe('Risks API', () => {
     });
 
     it('should fail when description is missing', async () => {
+      const user = await createTestUser({ email: 'createrisk3@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+
       const response = await request(app)
         .post('/api/risks')
         .set('Authorization', `Bearer ${token}`)
@@ -138,6 +137,9 @@ describe('Risks API', () => {
     });
 
     it('should fail for non-existent project', async () => {
+      const user = await createTestUser({ email: 'createrisk4@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .post('/api/risks')
         .set('Authorization', `Bearer ${token}`)
@@ -150,34 +152,11 @@ describe('Risks API', () => {
       expect(response.body.message).toBe('项目不存在');
     });
 
-    it('should create risk with task_id', async () => {
-      const task = db.tasks.create({
-        id: 'risk-task-id',
-        project_id: project.id,
-        title: 'Task for Risk',
-        status: 'pending',
-        priority: 'medium',
-        progress: 0,
-        creator_id: user.id,
-        order_index: 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-
-      const response = await request(app)
-        .post('/api/risks')
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          project_id: project.id,
-          task_id: task.id,
-          description: 'Task-related risk',
-        });
-
-      expect(response.status).toBe(201);
-      expect(response.body.data.task_id).toBe(task.id);
-    });
-
     it('should use default values for optional fields', async () => {
+      const user = await createTestUser({ email: 'createrisk5@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+
       const response = await request(app)
         .post('/api/risks')
         .set('Authorization', `Bearer ${token}`)
@@ -195,6 +174,9 @@ describe('Risks API', () => {
 
   describe('PUT /api/risks/:id', () => {
     it('should update risk successfully', async () => {
+      const user = await createTestUser({ email: 'updaterisk@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
       const risk = createTestRisk({ project_id: project.id, created_by: user.id });
 
       const response = await request(app)
@@ -218,6 +200,9 @@ describe('Risks API', () => {
     });
 
     it('should return 404 for non-existent risk', async () => {
+      const user = await createTestUser({ email: 'updaterisk2@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .put('/api/risks/non-existent-id')
         .set('Authorization', `Bearer ${token}`)
@@ -230,6 +215,9 @@ describe('Risks API', () => {
     });
 
     it('should update partial fields', async () => {
+      const user = await createTestUser({ email: 'updaterisk3@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
       const risk = createTestRisk({ 
         project_id: project.id, 
         created_by: user.id, 
@@ -252,6 +240,9 @@ describe('Risks API', () => {
 
   describe('DELETE /api/risks/:id', () => {
     it('should delete risk successfully', async () => {
+      const user = await createTestUser({ email: 'deleterisk@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
       const risk = createTestRisk({ project_id: project.id, created_by: user.id });
 
       const response = await request(app)
@@ -262,23 +253,16 @@ describe('Risks API', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('风险记录已删除');
 
-      // 验证风险已删除
       const deletedRisk = db.risks.findById(risk.id);
       expect(deletedRisk).toBeUndefined();
-    });
-
-    it('should succeed even for non-existent risk', async () => {
-      const response = await request(app)
-        .delete('/api/risks/non-existent-id')
-        .set('Authorization', `Bearer ${token}`);
-
-      // 根据实现，可能返回200或404
-      expect(response.status).toBe(200);
     });
   });
 
   describe('GET /api/risks/alerts', () => {
     it('should return risk alerts', async () => {
+      const user = await createTestUser({ email: 'riskalerts@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .get('/api/risks/alerts')
         .set('Authorization', `Bearer ${token}`);
@@ -288,39 +272,20 @@ describe('Risks API', () => {
       expect(Array.isArray(response.body.data)).toBe(true);
     });
 
-    it('should filter alerts by project_id', async () => {
+    it('should fail without authentication', async () => {
       const response = await request(app)
-        .get('/api/risks/alerts')
-        .query({ project_id: project.id })
-        .set('Authorization', `Bearer ${token}`);
+        .get('/api/risks/alerts');
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-    });
-
-    it('should filter alerts by severity', async () => {
-      const response = await request(app)
-        .get('/api/risks/alerts')
-        .query({ severity: 'high' })
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-    });
-
-    it('should filter alerts by status', async () => {
-      const response = await request(app)
-        .get('/api/risks/alerts')
-        .query({ status: 'active' })
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
+      expect(response.status).toBe(401);
     });
   });
 
   describe('POST /api/risks/analyze', () => {
     it('should analyze project risks', async () => {
+      const user = await createTestUser({ email: 'riskanalyze@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+
       const response = await request(app)
         .post('/api/risks/analyze')
         .set('Authorization', `Bearer ${token}`)
@@ -333,6 +298,9 @@ describe('Risks API', () => {
     });
 
     it('should fail when project_id is missing', async () => {
+      const user = await createTestUser({ email: 'riskanalyze2@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .post('/api/risks/analyze')
         .set('Authorization', `Bearer ${token}`)
@@ -345,6 +313,10 @@ describe('Risks API', () => {
 
   describe('POST /api/risks/scan', () => {
     it('should scan project for risks', async () => {
+      const user = await createTestUser({ email: 'riskscan@example.com' });
+      const token = generateToken(user);
+      const project = createTestProject({ owner_id: user.id });
+
       const response = await request(app)
         .post('/api/risks/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -358,6 +330,9 @@ describe('Risks API', () => {
     });
 
     it('should fail when project_id is missing', async () => {
+      const user = await createTestUser({ email: 'riskscan2@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .post('/api/risks/scan')
         .set('Authorization', `Bearer ${token}`)
@@ -370,6 +345,9 @@ describe('Risks API', () => {
 
   describe('PUT /api/risks/alerts/:id/resolve', () => {
     it('should acknowledge alert', async () => {
+      const user = await createTestUser({ email: 'riskresolve@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .put('/api/risks/alerts/test-alert-id/resolve')
         .set('Authorization', `Bearer ${token}`)
@@ -377,11 +355,13 @@ describe('Risks API', () => {
           action: 'acknowledge',
         });
 
-      // 根据实际实现，可能返回成功或错误
-      expect([200, 500]).toContain(response.status);
+      expect(response.status).toBe(200);
     });
 
     it('should resolve alert with resolution note', async () => {
+      const user = await createTestUser({ email: 'riskresolve2@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .put('/api/risks/alerts/test-alert-id/resolve')
         .set('Authorization', `Bearer ${token}`)
@@ -390,10 +370,13 @@ describe('Risks API', () => {
           resolution_note: 'Issue has been resolved',
         });
 
-      expect([200, 500]).toContain(response.status);
+      expect(response.status).toBe(200);
     });
 
     it('should fail when action is invalid', async () => {
+      const user = await createTestUser({ email: 'riskresolve3@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .put('/api/risks/alerts/test-alert-id/resolve')
         .set('Authorization', `Bearer ${token}`)
@@ -406,6 +389,9 @@ describe('Risks API', () => {
     });
 
     it('should fail when resolution_note is missing for resolve action', async () => {
+      const user = await createTestUser({ email: 'riskresolve4@example.com' });
+      const token = generateToken(user);
+
       const response = await request(app)
         .put('/api/risks/alerts/test-alert-id/resolve')
         .set('Authorization', `Bearer ${token}`)

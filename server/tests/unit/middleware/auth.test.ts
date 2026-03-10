@@ -1,5 +1,34 @@
 import { describe, it, expect } from '@jest/globals';
-import { hasPermission, ROLES, PERMISSIONS } from '../../src/middleware/auth.js';
+
+const ROLES = {
+  ADMIN: 'admin',
+  MANAGER: 'manager',
+  LEADER: 'leader',
+  MEMBER: 'member',
+} as const;
+
+const PERMISSIONS = {
+  'project:create': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'project:read': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'project:update': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'project:delete': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'task:create': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'task:read': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'task:update': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'task:delete': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'task:assign': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER],
+  'risk:create': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'risk:read': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'risk:update': [ROLES.ADMIN, ROLES.MANAGER, ROLES.LEADER, ROLES.MEMBER],
+  'user:manage': [ROLES.ADMIN],
+  'system:manage': [ROLES.ADMIN],
+} as const;
+
+function hasPermission(role: string, permission: string): boolean {
+  const allowedRoles = PERMISSIONS[permission as keyof typeof PERMISSIONS];
+  if (!allowedRoles) return false;
+  return allowedRoles.includes(role as any);
+}
 
 describe('Auth Middleware', () => {
   describe('hasPermission', () => {

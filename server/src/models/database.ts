@@ -23,6 +23,7 @@ interface DataStore {
   reports: any[];
   risk_alerts: any[];
   risk_rules: any[];
+  team_messages: any[];
 }
 
 let store: DataStore = {
@@ -38,6 +39,7 @@ let store: DataStore = {
   reports: [],
   risk_alerts: [],
   risk_rules: [],
+  team_messages: [],
 };
 
 function loadStore() {
@@ -58,6 +60,7 @@ function loadStore() {
         reports: loadedData.reports || [],
         risk_alerts: loadedData.risk_alerts || [],
         risk_rules: loadedData.risk_rules || [],
+        team_messages: loadedData.team_messages || [],
       };
     }
   } catch (e) {
@@ -142,6 +145,8 @@ export const db = {
   tasks: {
     findById: (id: string) => store.tasks.find(t => t.id === id),
     findByProject: (projectId: string) => store.tasks.filter(t => t.project_id === projectId),
+    findByAssignee: (userId: string) => store.tasks.filter(t => t.assignee_id === userId),
+    getAll: () => store.tasks,
     create: (task: any) => {
       store.tasks.push(task);
       saveStore();
@@ -347,6 +352,14 @@ export const db = {
         return true;
       }
       return false;
+    },
+  },
+  teamMessages: {
+    getAll: () => store.team_messages,
+    create: (message: any) => {
+      store.team_messages.push(message);
+      saveStore();
+      return message;
     },
   },
 };

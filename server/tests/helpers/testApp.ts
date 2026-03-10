@@ -18,12 +18,16 @@ export function createTestApp() {
   const tasksRouter = createTasksRouter();
   const risksRouter = createRisksRouter();
   const aiRouter = createAIRouter();
+  const workbenchRouter = createWorkbenchRouter();
+  const teamRouter = createTeamRouter();
   
   app.use('/api/auth', authRouter);
   app.use('/api/projects', projectsRouter);
   app.use('/api/tasks', tasksRouter);
   app.use('/api/risks', risksRouter);
   app.use('/api/ai', aiRouter);
+  app.use('/api/workbench', workbenchRouter);
+  app.use('/api/team', teamRouter);
   
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -690,6 +694,586 @@ function createAIRouter() {
   return router;
 }
 
+function createWorkbenchRouter() {
+  const router = express.Router();
+  
+  router.get('/', authenticateToken, (req: express.Request, res: express.Response) => {
+    const userId = (req as any).user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const userTasks = db.tasks.findByAssignee(userId);
+    const pendingTasks = userTasks.filter((t: any) => t.status !== 'completed');
+    const highPriorityTasks = pendingTasks.filter((t: any) => t.priority === 'high' || t.priority === 'urgent');
+
+    const sevenDaysLater = new Date(today);
+    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+
+    const upcomingTasks = pendingTasks.filter((t: any) => {
+      if (!t.end_date) return false;
+      const endDate = new Date(t.end_date);
+      return endDate >= today && endDate <= sevenDaysLater;
+    });
+
+    const overdueTasks = pendingTasks.filter((t: any) => {
+      if (!t.end_date) return false;
+      const endDate = new Date(t.end_date);
+      endDate.setHours(23, 59, 59, 999);
+      return endDate < today;
+    });
+
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    const weekCompleted = userTasks.filter((t: any) => {
+      if (t.status !== 'completed' || !t.updated_at) return false;
+      const updatedDate = new Date(t.updated_at);
+      return updatedDate >= weekStart && updatedDate <= weekEnd;
+    });
+
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const monthCompleted = userTasks.filter((t: any) => {
+      if (t.status !== 'completed' || !t.updated_at) return false;
+      const updatedDate = new Date(t.updated_at);
+      return updatedDate >= monthStart && updatedDate <= monthEnd;
+    });
+
+    const completedWithDueDate = userTasks.filter((t: any) => t.status === 'completed' && t.end_date);
+    const onTimeCompleted = completedWithDueDate.filter((t: any) => {
+      const endDate = new Date(t.end_date);
+      const updatedAt = new Date(t.updated_at);
+      return updatedAt <= endDate;
+    });
+
+    const onTimeRate = completedWithDueDate.length > 0 
+      ? Math.round((onTimeCompleted.length / completedWithDueDate.length) * 100) 
+      : 0;
+
+    const userProjects = db.project_members.getAll().filter((pm: any) => pm.user_id === userId);
+    const projectIds = userProjects.map((pm: any) => pm.project_id);
+    const projects = projectIds.map((id: string) => db.projects.findById(id)).filter(Boolean);
+
+    const notifications = db.notifications.findByUser(userId);
+    const unreadNotifications = notifications.filter((n: any) => n.read === 0);
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalPending: pendingTasks.length,
+          highPriority: highPriorityTasks.length,
+          upcoming: upcomingTasks.length,
+          overdue: overdueTasks.length,
+          weekCompleted: weekCompleted.length,
+          monthCompleted: monthCompleted.length,
+          onTimeRate,
+        },
+        projects: projects.slice(0, 5),
+        recentNotifications: unreadNotifications.slice(0, 5),
+      },
+    });
+  });
+
+  router.get('/todos', authenticateToken, (req: express.Request, res: express.Response) => {
+    const userId = (req as any).user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const userTasks = db.tasks.findByAssignee(userId);
+    const pendingTasks = userTasks.filter((t: any) => t.status !== 'completed');
+
+    const todos = pendingTasks.map((t: any) => {
+      const project = db.projects.findById(t.project_id);
+      let daysUntilDue = null;
+      let isOverdue = false;
+
+      if (t.end_date) {
+        const endDate = new Date(t.end_date);
+        endDate.setHours(23, 59, 59, 999);
+        const diffTime = endDate.getTime() - today.getTime();
+        daysUntilDue = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        isOverdue = daysUntilDue < 0;
+      }
+
+      return {
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        status: t.status,
+        progress: t.progress,
+        end_date: t.end_date,
+        daysUntilDue,
+        isOverdue,
+        project_id: t.project_id,
+        project_name: project?.name || '未知项目',
+        assignee_name: (req as any).user.name,
+      };
+    });
+
+    todos.sort((a: any, b: any) => {
+      const priorityOrder: any = { urgent: 0, high: 1, medium: 2, low: 3 };
+      const priorityDiff = (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+
+      if (a.daysUntilDue !== null && b.daysUntilDue !== null) {
+        return a.daysUntilDue - b.daysUntilDue;
+      }
+      if (a.daysUntilDue !== null) return -1;
+      if (b.daysUntilDue !== null) return 1;
+
+      return 0;
+    });
+
+    res.json({ success: true, data: todos });
+  });
+
+  router.get('/schedule', authenticateToken, (req: express.Request, res: express.Response) => {
+    const userId = (req as any).user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const userTasks = db.tasks.findByAssignee(userId);
+
+    const schedule: any[] = [];
+    const dateMap = new Map<string, any[]>();
+
+    for (let i = 0; i < 8; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      dateMap.set(dateStr, []);
+    }
+
+    userTasks.forEach((t: any) => {
+      if (!t.end_date || t.status === 'completed') return;
+
+      const endDate = new Date(t.end_date);
+      endDate.setHours(0, 0, 0, 0);
+      const dateStr = endDate.toISOString().split('T')[0];
+
+      if (dateMap.has(dateStr)) {
+        const project = db.projects.findById(t.project_id);
+        dateMap.get(dateStr)!.push({
+          id: t.id,
+          title: t.title,
+          priority: t.priority,
+          status: t.status,
+          progress: t.progress,
+          project_id: t.project_id,
+          project_name: project?.name || '未知项目',
+        });
+      }
+    });
+
+    dateMap.forEach((tasks, dateStr) => {
+      const date = new Date(dateStr);
+      const isToday = date.toDateString() === today.toDateString();
+      const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()];
+
+      schedule.push({
+        date: dateStr,
+        dayOfWeek,
+        isToday,
+        taskCount: tasks.length,
+        tasks: tasks.sort((a: any, b: any) => {
+          const priorityOrder: any = { urgent: 0, high: 1, medium: 2, low: 3 };
+          return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+        }),
+      });
+    });
+
+    res.json({ success: true, data: schedule });
+  });
+
+  router.get('/stats', authenticateToken, (req: express.Request, res: express.Response) => {
+    const userId = (req as any).user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const userTasks = db.tasks.findByAssignee(userId);
+
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    const weekCompleted = userTasks.filter((t: any) => {
+      if (t.status !== 'completed' || !t.updated_at) return false;
+      const updatedDate = new Date(t.updated_at);
+      return updatedDate >= weekStart && updatedDate <= weekEnd;
+    });
+
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const monthCompleted = userTasks.filter((t: any) => {
+      if (t.status !== 'completed' || !t.updated_at) return false;
+      const updatedDate = new Date(t.updated_at);
+      return updatedDate >= monthStart && updatedDate <= monthEnd;
+    });
+
+    const completedWithDueDate = userTasks.filter((t: any) => t.status === 'completed' && t.end_date);
+    const onTimeCompleted = completedWithDueDate.filter((t: any) => {
+      const endDate = new Date(t.end_date);
+      endDate.setHours(23, 59, 59, 999);
+      const updatedAt = new Date(t.updated_at);
+      return updatedAt <= endDate;
+    });
+
+    const onTimeRate = completedWithDueDate.length > 0 
+      ? Math.round((onTimeCompleted.length / completedWithDueDate.length) * 100) 
+      : 0;
+
+    const pendingTasks = userTasks.filter((t: any) => t.status !== 'completed');
+    const inProgressTasks = pendingTasks.filter((t: any) => t.status === 'in_progress');
+    const pendingStatusTasks = pendingTasks.filter((t: any) => t.status === 'pending');
+
+    const priorityDistribution = {
+      urgent: pendingTasks.filter((t: any) => t.priority === 'urgent').length,
+      high: pendingTasks.filter((t: any) => t.priority === 'high').length,
+      medium: pendingTasks.filter((t: any) => t.priority === 'medium').length,
+      low: pendingTasks.filter((t: any) => t.priority === 'low').length,
+    };
+
+    res.json({
+      success: true,
+      data: {
+        weekly: {
+          completed: weekCompleted.length,
+          trend: 0,
+        },
+        monthly: {
+          completed: monthCompleted.length,
+          trend: 0,
+        },
+        onTimeRate,
+        avgResponseTime: 0,
+        taskDistribution: {
+          completed: userTasks.filter((t: any) => t.status === 'completed').length,
+          inProgress: inProgressTasks.length,
+          pending: pendingStatusTasks.length,
+        },
+        priorityDistribution,
+      },
+    });
+  });
+
+  router.put('/todos/:id/complete', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    const task = db.tasks.findById(id);
+    if (!task) {
+      return res.status(404).json({ success: false, message: '任务不存在' });
+    }
+
+    if (task.assignee_id !== userId) {
+      return res.status(403).json({ success: false, message: '无权操作此任务' });
+    }
+
+    const updated = db.tasks.update(id, {
+      status: 'completed',
+      progress: 100,
+      updated_at: new Date().toISOString(),
+    });
+
+    res.json({ success: true, data: updated });
+  });
+
+  return router;
+}
+
+function createTeamRouter() {
+  const router = express.Router();
+
+  router.get('/status', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { project_id } = req.query;
+    
+    let users = db.users.getAll();
+    let projectMembers: any[] = [];
+    
+    if (project_id) {
+      projectMembers = db.project_members.findByProject(project_id as string);
+      const memberIds = projectMembers.map(pm => pm.user_id);
+      users = users.filter(u => memberIds.includes(u.id));
+    }
+    
+    const teamStatus = users.map(user => {
+      const allTasks = db.tasks.findByProject(project_id as string).filter(t => project_id);
+      const userTasks = project_id 
+        ? allTasks.filter(t => t.assignee_id === user.id)
+        : db.tasks.getAll().filter(t => t.assignee_id === user.id);
+      
+      const activeTasks = userTasks.filter(t => 
+        t.status === 'in_progress' || t.status === 'pending'
+      );
+      const completedTasks = userTasks.filter(t => t.status === 'completed');
+      
+      const maxTasks = 10;
+      const taskCount = activeTasks.length;
+      const workloadPercentage = Math.min((taskCount / maxTasks) * 100, 100);
+      
+      const now = new Date();
+      const lastActivity = new Date(user.updated_at);
+      const hoursSinceActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
+      const isOnline = hoursSinceActivity < 1;
+      
+      const loadLevel = getLoadLevel(workloadPercentage);
+      const warningStatus = workloadPercentage > 80;
+      
+      return {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          role: user.role,
+        },
+        taskCount: activeTasks.length,
+        completedTaskCount: completedTasks.length,
+        workloadPercentage: Math.round(workloadPercentage),
+        loadLevel,
+        isOnline,
+        lastActivity: user.updated_at,
+        warningStatus,
+      };
+    });
+    
+    res.json({ success: true, data: teamStatus });
+  });
+
+  router.get('/:userId/workload', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { userId } = req.params;
+    const { project_id } = req.query;
+    
+    const user = db.users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+    
+    let tasks = db.tasks.getAll().filter(t => t.assignee_id === userId);
+    if (project_id) {
+      tasks = tasks.filter(t => t.project_id === project_id);
+    }
+    
+    const activeTasks = tasks.filter(t => 
+      t.status === 'in_progress' || t.status === 'pending'
+    );
+    const completedTasks = tasks.filter(t => t.status === 'completed');
+    const pausedTasks = tasks.filter(t => t.status === 'paused');
+    
+    const highPriorityTasks = activeTasks.filter(t => t.priority === 'high' || t.priority === 'urgent');
+    const overdueTasks = activeTasks.filter(t => {
+      if (!t.end_date) return false;
+      return new Date(t.end_date) < new Date() && t.status !== 'completed';
+    });
+    
+    const maxTasks = 10;
+    const workloadPercentage = Math.min((activeTasks.length / maxTasks) * 100, 100);
+    const loadLevel = getLoadLevel(workloadPercentage);
+    
+    const workload = {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+      },
+      summary: {
+        totalTasks: tasks.length,
+        activeTasks: activeTasks.length,
+        completedTasks: completedTasks.length,
+        pausedTasks: pausedTasks.length,
+        highPriorityTasks: highPriorityTasks.length,
+        overdueTasks: overdueTasks.length,
+        workloadPercentage: Math.round(workloadPercentage),
+        loadLevel,
+        warningStatus: workloadPercentage > 80,
+      },
+      tasks: {
+        active: activeTasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          priority: t.priority,
+          progress: t.progress,
+          start_date: t.start_date,
+          end_date: t.end_date,
+          project_id: t.project_id,
+        })),
+        completed: completedTasks.slice(-5).map(t => ({
+          id: t.id,
+          title: t.title,
+          completed_at: t.updated_at,
+          project_id: t.project_id,
+        })),
+      },
+    };
+    
+    res.json({ success: true, data: workload });
+  });
+
+  router.get('/workload-summary', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { project_id } = req.query;
+    
+    let users = db.users.getAll();
+    let projectMembers: any[] = [];
+    
+    if (project_id) {
+      projectMembers = db.project_members.findByProject(project_id as string);
+      const memberIds = projectMembers.map(pm => pm.user_id);
+      users = users.filter(u => memberIds.includes(u.id));
+    }
+    
+    const memberWorkloads = users.map(user => {
+      let tasks = db.tasks.getAll().filter(t => t.assignee_id === user.id);
+      if (project_id) {
+        tasks = tasks.filter(t => t.project_id === project_id);
+      }
+      
+      const activeTasks = tasks.filter(t => 
+        t.status === 'in_progress' || t.status === 'pending'
+      );
+      const completedTasks = tasks.filter(t => t.status === 'completed');
+      
+      const maxTasks = 10;
+      const workloadPercentage = Math.min((activeTasks.length / maxTasks) * 100, 100);
+      
+      return {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          role: user.role,
+        },
+        activeTasks: activeTasks.length,
+        completedTasks: completedTasks.length,
+        workloadPercentage: Math.round(workloadPercentage),
+        loadLevel: getLoadLevel(workloadPercentage),
+      };
+    });
+    
+    const totalActiveTasks = memberWorkloads.reduce((sum, m) => sum + m.activeTasks, 0);
+    const totalCompletedTasks = memberWorkloads.reduce((sum, m) => sum + m.completedTasks, 0);
+    const avgWorkload = memberWorkloads.length > 0 
+      ? memberWorkloads.reduce((sum, m) => sum + m.workloadPercentage, 0) / memberWorkloads.length 
+      : 0;
+    
+    const loadDistribution = {
+      low: memberWorkloads.filter(m => m.loadLevel === 'low').length,
+      normal: memberWorkloads.filter(m => m.loadLevel === 'normal').length,
+      high: memberWorkloads.filter(m => m.loadLevel === 'high').length,
+      overloaded: memberWorkloads.filter(m => m.loadLevel === 'overloaded').length,
+    };
+    
+    const onlineMembers = memberWorkloads.filter(m => {
+      const user = db.users.findById(m.user.id);
+      if (!user) return false;
+      const hoursSinceActivity = (Date.now() - new Date(user.updated_at).getTime()) / (1000 * 60 * 60);
+      return hoursSinceActivity < 1;
+    }).length;
+    
+    const summary = {
+      totalMembers: memberWorkloads.length,
+      onlineMembers,
+      totalActiveTasks,
+      totalCompletedTasks,
+      averageWorkload: Math.round(avgWorkload),
+      loadDistribution,
+      members: memberWorkloads,
+    };
+    
+    res.json({ success: true, data: summary });
+  });
+
+  router.post('/messages', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { project_id, content, message_type, recipients } = req.body;
+    
+    if (!content || content.trim() === '') {
+      return res.status(400).json({ success: false, message: '消息内容不能为空' });
+    }
+    
+    const id = uuidv4();
+    const message = {
+      id,
+      project_id: project_id || null,
+      sender_id: (req as any).user.id,
+      content: content.trim(),
+      message_type: message_type || 'general',
+      recipients: recipients || [],
+      created_at: new Date().toISOString(),
+    };
+    
+    db.teamMessages.create(message);
+    
+    res.status(201).json({ 
+      success: true, 
+      data: {
+        ...message,
+        sender_name: (req as any).user.name,
+        sender_email: (req as any).user.email,
+      }
+    });
+  });
+
+  router.get('/messages', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { project_id, limit = 50, offset = 0 } = req.query;
+    
+    let messages = db.teamMessages.getAll();
+    
+    if (project_id) {
+      messages = messages.filter((m: any) => m.project_id === project_id);
+    }
+    
+    messages.sort((a: any, b: any) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    const startIndex = parseInt(offset as string);
+    const endIndex = startIndex + parseInt(limit as string);
+    const paginatedMessages = messages.slice(startIndex, endIndex);
+    
+    const messagesWithSender = paginatedMessages.map((m: any) => {
+      const sender = db.users.findById(m.sender_id);
+      return {
+        ...m,
+        sender_name: sender?.name || 'Unknown',
+        sender_email: sender?.email || '',
+        sender_avatar: sender?.avatar || null,
+      };
+    });
+    
+    res.json({ 
+      success: true, 
+      data: messagesWithSender,
+      pagination: {
+        total: messages.length,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      }
+    });
+  });
+
+  return router;
+}
+
+function getLoadLevel(percentage: number): 'low' | 'normal' | 'high' | 'overloaded' {
+  if (percentage <= 40) return 'low';
+  if (percentage <= 70) return 'normal';
+  if (percentage <= 80) return 'high';
+  return 'overloaded';
+}
+
 function authenticateToken(req: express.Request, res: express.Response, next: express.NextFunction) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -699,7 +1283,7 @@ function authenticateToken(req: express.Request, res: express.Response, next: ex
   }
   
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET || 'test_jwt_secret_key');
+    const user = jwt.verify(token, process.env.JWT_SECRET || 'aipm_jwt_secret_key_2024');
     (req as any).user = user;
     next();
   } catch (error) {
@@ -740,7 +1324,7 @@ export async function createAdminUser(overrides: any = {}) {
 export function generateToken(user: any) {
   return jwt.sign(
     { id: user.id, email: user.email, name: user.name, role: user.role },
-    process.env.JWT_SECRET || 'test_jwt_secret_key',
+    process.env.JWT_SECRET || 'aipm_jwt_secret_key_2024',
     { expiresIn: '7d' }
   );
 }

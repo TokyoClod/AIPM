@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-10
+
+### Added
+
+#### Personal Workbench
+- Personal workbench page with todo aggregation
+- Today's schedule card with task deadlines
+- Efficiency statistics (weekly completions, on-time rate, avg response time)
+- Quick action shortcuts for common operations
+
+#### Team Collaboration Board
+- Real-time team member status display
+- Task load visualization with progress bars
+- Overload warning indicators (red border for ≥90% load)
+- Online status indicators
+- Team messaging functionality
+
+#### Smart Reminder System
+- Deadline reminders (24 hours before due)
+- Priority change notifications
+- Task assignment notifications
+
+#### Backend APIs
+- GET /api/workbench - Workbench overview
+- GET /api/workbench/todos - Todo items list
+- GET /api/workbench/schedule - Schedule calendar
+- GET /api/workbench/stats - Efficiency statistics
+- PUT /api/workbench/todos/:id/complete - Complete todo
+- GET /api/team/status - Team status list
+- GET /api/team/:userId/workload - Member workload
+- GET /api/team/workload-summary - Team load summary
+- POST /api/team/messages - Send team message
+- GET /api/team/messages - Get messages list
+
+### Tests
+- Workbench API tests: 19 test cases (all passed)
+- Team API tests: 28 test cases (all passed)
+- Total backend tests: 176 (100% pass rate)
+
+---
+
 ## [1.2.0] - 2026-03-10
 
 ### Added

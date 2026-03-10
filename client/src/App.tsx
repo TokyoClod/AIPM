@@ -9,6 +9,8 @@ import QuickInput from './components/AI/QuickInput';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Workbench from './pages/Workbench';
+import Team from './pages/Team';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import Tasks from './pages/Tasks';
@@ -95,6 +97,8 @@ function App() {
               <MainLayout>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
+                  <Route path="/workbench" element={<Workbench />} />
+                  <Route path="/team" element={<Team />} />
                   <Route path="/projects" element={<Projects />} />
                   <Route path="/projects/:id" element={<ProjectDetail />} />
                   <Route path="/tasks" element={<Tasks />} />

@@ -13,7 +13,9 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BulbOutlined,
-  BulbFilled
+  BulbFilled,
+  DesktopOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -31,6 +33,8 @@ interface MainLayoutProps {
 
 const menuItems = [
   { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
+  { key: '/workbench', icon: <DesktopOutlined />, label: '个人工作台' },
+  { key: '/team', icon: <TeamOutlined />, label: '团队协作' },
   { key: '/projects', icon: <ProjectOutlined />, label: '项目管理' },
   { key: '/tasks', icon: <FileTextOutlined />, label: '任务管理' },
   { key: '/risks', icon: <AlertOutlined />, label: '风险管理' },

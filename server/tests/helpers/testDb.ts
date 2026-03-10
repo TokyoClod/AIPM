@@ -23,6 +23,7 @@ interface DataStore {
   reports: any[];
   risk_alerts: any[];
   risk_rules: any[];
+  team_messages: any[];
 }
 
 const emptyStore: DataStore = {
@@ -38,6 +39,7 @@ const emptyStore: DataStore = {
   reports: [],
   risk_alerts: [],
   risk_rules: [],
+  team_messages: [],
 };
 
 let store: DataStore = { ...emptyStore };
@@ -117,6 +119,8 @@ export const db = {
   tasks: {
     findById: (id: string) => store.tasks.find(t => t.id === id),
     findByProject: (projectId: string) => store.tasks.filter(t => t.project_id === projectId),
+    findByAssignee: (assigneeId: string) => store.tasks.filter(t => t.assignee_id === assigneeId),
+    getAll: () => store.tasks,
     create: (task: any) => {
       store.tasks.push(task);
       saveStore();
@@ -318,6 +322,24 @@ export const db = {
       const idx = store.risk_rules.findIndex(r => r.id === id);
       if (idx >= 0) {
         store.risk_rules.splice(idx, 1);
+        saveStore();
+        return true;
+      }
+      return false;
+    },
+  },
+  teamMessages: {
+    findById: (id: string) => store.team_messages.find(m => m.id === id),
+    getAll: () => store.team_messages,
+    create: (message: any) => {
+      store.team_messages.push(message);
+      saveStore();
+      return message;
+    },
+    delete: (id: string) => {
+      const idx = store.team_messages.findIndex(m => m.id === id);
+      if (idx >= 0) {
+        store.team_messages.splice(idx, 1);
         saveStore();
         return true;
       }

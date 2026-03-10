@@ -9,6 +9,7 @@ import riskRoutes from './routes/risks.js';
 import notificationRoutes from './routes/notifications.js';
 import reportRoutes from './routes/reports.js';
 import aiRoutes from './routes/ai.js';
+import teamRoutes from './routes/team.js';
 import { schedulerService } from './services/scheduler.service.js';
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/api/risks', riskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/team', teamRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

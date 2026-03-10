@@ -94,7 +94,6 @@ export const reportApi = {
 };
 
 export const aiApi = {
-  // AI对话 - 流式响应
   aiChat: (message: string, conversationId?: string) => {
     const token = localStorage.getItem('token');
     const params = new URLSearchParams({ message });
@@ -108,25 +107,36 @@ export const aiApi = {
     } as any);
   },
 
-  // AI解析内容
   aiParse: (content: string) => 
     api.post('/ai/parse', { content }),
 
-  // AI风险分析
   aiAnalyze: (projectId: string) => 
     api.post(`/ai/analyze/${projectId}`),
 
-  // 获取对话列表
   getConversations: () => 
     api.get('/ai/conversations'),
 
-  // 获取对话详情
   getConversation: (id: string) => 
     api.get(`/ai/conversations/${id}`),
 
-  // 删除对话
   deleteConversation: (id: string) => 
     api.delete(`/ai/conversations/${id}`),
+};
+
+export const workbenchApi = {
+  getOverview: () => api.get('/workbench/overview'),
+  getTodos: () => api.get('/workbench/todos'),
+  getSchedule: () => api.get('/workbench/schedule'),
+  getStats: () => api.get('/workbench/stats'),
+  completeTodo: (id: string) => api.put(`/workbench/todos/${id}/complete`),
+};
+
+export const teamApi = {
+  getStatus: () => api.get('/team/status'),
+  getWorkload: () => api.get('/team/workload'),
+  getWorkloadSummary: () => api.get('/team/workload/summary'),
+  getMessages: () => api.get('/team/messages'),
+  sendMessage: (data: any) => api.post('/team/messages', data),
 };
 
 export default api;

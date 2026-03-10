@@ -44,7 +44,21 @@ function loadStore() {
   try {
     if (fs.existsSync(dbPath)) {
       const data = fs.readFileSync(dbPath, 'utf-8');
-      store = JSON.parse(data);
+      const loadedData = JSON.parse(data);
+      store = {
+        users: loadedData.users || [],
+        projects: loadedData.projects || [],
+        project_members: loadedData.project_members || [],
+        tasks: loadedData.tasks || [],
+        task_comments: loadedData.task_comments || [],
+        risks: loadedData.risks || [],
+        notifications: loadedData.notifications || [],
+        environments: loadedData.environments || [],
+        conversations: loadedData.conversations || [],
+        reports: loadedData.reports || [],
+        risk_alerts: loadedData.risk_alerts || [],
+        risk_rules: loadedData.risk_rules || [],
+      };
     }
   } catch (e) {
     console.log('Starting with empty database');

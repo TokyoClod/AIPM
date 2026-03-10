@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-10
+
+### Added
+
+#### Visual Design Upgrade
+- Complete visual design system overhaul for modern aesthetics
+- New color palette with indigo-based gradient primary color
+- Plus Jakarta Sans typography for modern feel
+- Glassmorphism effects on auth pages and modals
+- Mesh gradient background with flowing animation
+- Enhanced shadow system with depth layers
+
+#### UI/UX Improvements
+- Redesigned login/register page with glassmorphism card
+- Upgraded sidebar navigation with brand logo and gradient highlights
+- Modernized dashboard with animated stat cards
+- Enhanced AI assistant with floating animation and glow effects
+- Improved chart styling with custom gradients and tooltips
+- Added micro-interactions and hover animations throughout
+
+#### Interaction Design
+- Smooth page transitions with cubic-bezier easing
+- Animated stat cards with icon effects on hover
+- Floating animations for AI assistant button
+- Enhanced input focus states with glow effects
+- Responsive design optimizations
+
+### Changed
+- Primary color: #1890ff → #6366f1 (indigo gradient)
+- Font family: System fonts → Plus Jakarta Sans
+- All UI components: Updated styling for modern aesthetics
+
+---
+
 ## [1.1.0] - 2026-03-10
 
 ### Added

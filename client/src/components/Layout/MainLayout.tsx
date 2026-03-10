@@ -82,17 +82,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <Layout className="app-layout">
       <Sider 
-        className="app-sider" 
+        className={`app-sider ${collapsed ? 'sider-collapsed' : ''}`}
         trigger={null} 
         collapsible 
         collapsed={collapsed}
         width={240}
         collapsedWidth={80}
       >
-        <div style={{ padding: collapsed ? '16px 8px' : '16px 24px', textAlign: 'center' }}>
-          <Text strong style={{ fontSize: collapsed ? 14 : 18 }}>
-            {collapsed ? 'AIPM' : '项目管理平台'}
-          </Text>
+        <div className="sider-logo">
+          <div className="logo-icon">A</div>
+          <div className="logo-text">智能项目管理</div>
         </div>
         <Menu
           theme="light"
@@ -100,6 +99,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           selectedKeys={[location.pathname]}
           items={menuItems}
           onClick={handleMenuClick}
+          style={{ flex: 1 }}
         />
       </Sider>
       <Layout>
@@ -109,9 +109,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
             style={{ fontSize: 16 }}
+            className="btn-hover-effect"
           />
-          <Space size="large">
-            <Tooltip title={theme === 'light' ? '切换到暗色模式' : '切换到亮色模式'}>
+          <Space size="middle">
+            <Tooltip title={theme === 'light' ? '暗色模式' : '亮色模式'}>
               <Button
                 type="text"
                 icon={theme === 'light' ? <BulbOutlined /> : <BulbFilled />}
@@ -122,11 +123,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </Tooltip>
             <Dropdown
               menu={{ 
-                items: notifications.slice(0, 5).map((n, i) => ({
+                items: notifications.slice(0, 5).map((n) => ({
                   key: n.id,
                   label: (
-                    <div style={{ maxWidth: 280 }}>
-                      <Text strong>{n.title}</Text>
+                    <div style={{ maxWidth: 280, padding: '4px 0' }}>
+                      <Text strong style={{ fontSize: 13 }}>{n.title}</Text>
                       <br />
                       <Text type="secondary" style={{ fontSize: 12 }}>{n.content}</Text>
                     </div>
@@ -137,13 +138,23 @@ export default function MainLayout({ children }: MainLayoutProps) {
               trigger={['click']}
             >
               <Badge count={unreadCount} size="small">
-                <BellOutlined style={{ fontSize: 20, cursor: 'pointer' }} />
+                <Button type="text" className="btn-hover-effect">
+                  <BellOutlined style={{ fontSize: 20 }} />
+                </Button>
               </Badge>
             </Dropdown>
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-              <Space style={{ cursor: 'pointer' }}>
-                <Avatar icon={<UserOutlined />} src={user?.avatar} />
-                <Text>{user?.name}</Text>
+              <Space style={{ cursor: 'pointer' }} className="btn-hover-effect">
+                <Avatar 
+                  size={36} 
+                  icon={<UserOutlined />} 
+                  src={user?.avatar}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)'
+                  }} 
+                />
+                <Text style={{ fontWeight: 500 }}>{user?.name}</Text>
               </Space>
             </Dropdown>
           </Space>

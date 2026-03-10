@@ -1,0 +1,148 @@
+/* AI助手浮动按钮 */
+.ai-assistant-button {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1000;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  touch-action: none;
+}
+
+.ai-assistant-button:not(.dragging) {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 30px rgba(102, 126, 234, 0.6);
+  }
+}
+
+.ai-assistant-button:hover {
+  transform: scale(1.1);
+}
+
+.ai-assistant-button.dragging {
+  transform: scale(1.15);
+  box-shadow: 0 8px 40px rgba(102, 126, 234, 0.5);
+  cursor: grabbing;
+}
+
+.ai-assistant-button.open {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  box-shadow: 0 4px 20px rgba(238, 90, 111, 0.4);
+}
+
+.button-inner {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.ai-assistant-button.open .button-inner {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+
+.button-icon {
+  font-size: 24px;
+  color: white;
+  transition: transform 0.3s;
+}
+
+.ai-assistant-button:hover .button-icon {
+  transform: rotate(15deg);
+}
+
+.ai-assistant-button.open .button-icon {
+  transform: rotate(90deg);
+}
+
+/* 对话窗口 */
+.ai-assistant-window {
+  position: fixed;
+  width: 420px;
+  height: 600px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  z-index: 999;
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ai-assistant-button {
+    width: 52px;
+    height: 52px;
+  }
+
+  .button-inner {
+    width: 52px;
+    height: 52px;
+  }
+
+  .button-icon {
+    font-size: 22px;
+  }
+
+  .ai-assistant-window {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 0;
+    animation: slideUpMobile 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideUpMobile {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* 徽章样式调整 */
+.ai-assistant-button .ant-badge {
+  display: block;
+}
+
+.ai-assistant-button .ant-badge-count {
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.5);
+  font-size: 12px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+}

@@ -1,0 +1,32 @@
+{
+  "name": "ai-project-manager",
+  "version": "1.0.0",
+  "description": "多人协作项目管理平台",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "start": "cd server && npm start",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e",
+    "test:backend": "cd server && npm run test:coverage",
+    "test:frontend": "cd client && npm run test:coverage",
+    "test:coverage": "npm run test:backend && npm run test:frontend && npm run test:report",
+    "test:report": "node scripts/generate-coverage-report.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:codegen": "playwright codegen"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "concurrently": "^8.2.2",
+    "playwright": "^1.58.2"
+  }
+}

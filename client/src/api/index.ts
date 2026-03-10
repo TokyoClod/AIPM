@@ -1,0 +1,132 @@
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+
+const api = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = localStorage.getItem('token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const authApi = {
+  login: (email: string, password: string) => 
+    api.post('/auth/login', { email, password }),
+  register: (email: string, password: string, name: string) => 
+    api.post('/auth/register', { email, password, name }),
+  getMe: () => api.get('/auth/me'),
+  updateProfile: (data: any) => api.put('/auth/profile', data),
+  getUsers: () => api.get('/auth/users'),
+  updateUserRole: (id: string, role: string) => 
+    api.put(`/auth/users/${id}/role`, { role }),
+};
+
+export const projectApi = {
+  getAll: () => api.get('/projects'),
+  getById: (id: string) => api.get(`/projects/${id}`),
+  create: (data: any) => api.post('/projects', data),
+  update: (id: string, data: any) => api.put(`/projects/${id}`, data),
+  delete: (id: string) => api.delete(`/projects/${id}`),
+  addMember: (projectId: string, userId: string, role: string) => 
+    api.post(`/projects/${projectId}/members`, { user_id: userId, role }),
+  removeMember: (projectId: string, userId: string) => 
+    api.delete(`/projects/${projectId}/members/${userId}`),
+  getDashboard: (id: string) => api.get(`/projects/${id}/dashboard`),
+};
+
+export const taskApi = {
+  getAll: (params?: any) => api.get('/tasks', { params }),
+  getById: (id: string) => api.get(`/tasks/${id}`),
+  create: (data: any) => api.post('/tasks', data),
+  update: (id: string, data: any) => api.put(`/tasks/${id}`, data),
+  delete: (id: string) => api.delete(`/tasks/${id}`),
+  updateProgress: (id: string, data: any) => api.put(`/tasks/${id}/progress`, data),
+  addComment: (id: string, content: string) => 
+    api.post(`/tasks/${id}/comments`, { content }),
+  getGantt: (projectId: string) => api.get(`/tasks/gantt/${projectId}`),
+};
+
+export const riskApi = {
+  getAll: (params?: any) => api.get('/risks', { params }),
+  create: (data: any) => api.post('/risks', data),
+  update: (id: string, data: any) => api.put(`/risks/${id}`, data),
+  delete: (id: string) => api.delete(`/risks/${id}`),
+  // 风险预警接口
+  getAlerts: (params?: any) => api.get('/risks/alerts', { params }),
+  analyzeProject: (projectId: string) => api.post('/risks/analyze', { project_id: projectId }),
+  resolveAlert: (id: string, action: string, resolutionNote?: string) => 
+    api.put(`/risks/alerts/${id}/resolve`, { action, resolution_note: resolutionNote }),
+  scanProject: (projectId: string) => api.post('/risks/scan', { project_id: projectId }),
+};
+
+export const notificationApi = {
+  getAll: () => api.get('/notifications'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markRead: (id: string) => api.put(`/notifications/${id}/read`),
+  markAllRead: () => api.put('/notifications/read-all'),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
+};
+
+export const reportApi = {
+  getDashboard: () => api.get('/reports/dashboard'),
+  generateDailyReport: (projectId?: string) => 
+    api.post('/reports/daily-report', { project_id: projectId }),
+  getRiskAnalytics: (projectId?: string) => 
+    api.get('/reports/analytics/risks', { params: { project_id: projectId } }),
+};
+
+export const aiApi = {
+  // AI对话 - 流式响应
+  aiChat: (message: string, conversationId?: string) => {
+    const token = localStorage.getItem('token');
+    const params = new URLSearchParams({ message });
+    if (conversationId) {
+      params.append('conversation_id', conversationId);
+    }
+    return new EventSource(`/api/ai/chat?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    } as any);
+  },
+
+  // AI解析内容
+  aiParse: (content: string) => 
+    api.post('/ai/parse', { content }),
+
+  // AI风险分析
+  aiAnalyze: (projectId: string) => 
+    api.post(`/ai/analyze/${projectId}`),
+
+  // 获取对话列表
+  getConversations: () => 
+    api.get('/ai/conversations'),
+
+  // 获取对话详情
+  getConversation: (id: string) => 
+    api.get(`/ai/conversations/${id}`),
+
+  // 删除对话
+  deleteConversation: (id: string) => 
+    api.delete(`/ai/conversations/${id}`),
+};
+
+export default api;

@@ -8,7 +8,8 @@ import {
   UserOutlined,
   BarChartOutlined,
   LineChartOutlined,
-  SwapOutlined
+  SwapOutlined,
+  CompareOutlined
 } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import { performanceApi } from '../api';
@@ -52,9 +53,11 @@ interface MemberPerformance {
 }
 
 interface TrendData {
-  date: string;
+  period: string;
+  totalTasks: number;
+  completedTasks: number;
   completionRate: number;
-  taskCount: number;
+  inProgressTasks: number;
 }
 
 export default function Performance() {
@@ -128,7 +131,7 @@ export default function Performance() {
     grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
     xAxis: { 
       type: 'category', 
-      data: trends.map(t => dayjs(t.date).format(period === 'week' ? 'MM-DD' : 'MM-DD')),
+      data: trends.map(t => t.period ? dayjs(t.period).format(period === 'week' ? 'MM-DD' : 'YYYY-MM') : ''),
       axisLine: { lineStyle: { color: '#e2e8f0' } },
       axisLabel: { color: '#64748b' }
     },
@@ -170,7 +173,7 @@ export default function Performance() {
         name: '任务数量',
         type: 'bar',
         yAxisIndex: 1,
-        data: trends.map(t => t.taskCount),
+        data: trends.map(t => t.totalTasks),
         itemStyle: { color: '#10b981', borderRadius: [4, 4, 0, 0] }
       }
     ]

@@ -8,7 +8,7 @@ import {
   UserOutlined,
   BarChartOutlined,
   LineChartOutlined,
-  CompareOutlined
+  SwapOutlined
 } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import { performanceApi } from '../api';

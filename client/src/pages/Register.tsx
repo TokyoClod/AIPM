@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Form, Input, Button, Card, message, Tabs } from 'antd';
+import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -28,25 +28,31 @@ export default function Register() {
 
   return (
     <div className="auth-container">
-      <Card className="auth-card">
-        <h2>注册新账号</h2>
-        <Form onFinish={handleRegister} layout="vertical">
+      <div className="auth-card">
+        <div className="brand-logo">
+          <h1>AIPM</h1>
+          <p>智能项目管理平台</p>
+        </div>
+        <Form onFinish={handleRegister} layout="vertical" size="large">
           <Form.Item name="name" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
+            <Input prefix={<UserOutlined style={{ color: '#6366f1' }} />} placeholder="用户名" style={{ height: 48 }} />
           </Form.Item>
           <Form.Item name="email" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱' }]}>
-            <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" />
+            <Input prefix={<MailOutlined style={{ color: '#6366f1' }} />} placeholder="邮箱地址" style={{ height: 48 }} />
           </Form.Item>
           <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }, { min: 6, message: '密码至少6位' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
+            <Input.Password prefix={<LockOutlined style={{ color: '#6366f1' }} />} placeholder="设置密码" style={{ height: 48 }} />
           </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" size="large" block loading={loading}>
-              注册
+          <Form.Item style={{ marginBottom: 16 }}>
+            <Button type="primary" htmlType="submit" size="large" block loading={loading} style={{ height: 48 }}>
+              创建账号
             </Button>
           </Form.Item>
         </Form>
-      </Card>
+        <div style={{ textAlign: 'center' }}>
+          已有账号？ <Link to="/login">立即登录</Link>
+        </div>
+      </div>
     </div>
   );
 }

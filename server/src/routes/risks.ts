@@ -1,14 +1,15 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/database.js';
-import { AuthRequest, authMiddleware, permissionMiddleware } from '../middleware/auth.js';
+import { AuthRequest, authMiddleware } from '../middleware/auth.js';
+import { checkPermission } from '../middleware/permission.js';
 import { riskAlertService } from '../services/risk-alert.service.js';
 
 const router = Router();
 
 router.use(authMiddleware);
 
-router.get('/', (req: AuthRequest, res: Response) => {
+router.get('/', checkPermission('project:view'), (req: AuthRequest, res: Response) => {
   try {
     const { project_id, level, status } = req.query;
 
@@ -29,7 +30,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/', permissionMiddleware('risk:create'), (req: AuthRequest, res: Response) => {
+router.post('/', checkPermission('risk:create'), (req: AuthRequest, res: Response) => {
   try {
     const { project_id, task_id, level, type, description, mitigation } = req.body;
 
@@ -64,7 +65,7 @@ router.post('/', permissionMiddleware('risk:create'), (req: AuthRequest, res: Re
   }
 });
 
-router.put('/:id', permissionMiddleware('risk:update'), (req: AuthRequest, res: Response) => {
+router.put('/:id', checkPermission('risk:edit'), (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { level, type, description, mitigation, status } = req.body;
@@ -90,7 +91,7 @@ router.put('/:id', permissionMiddleware('risk:update'), (req: AuthRequest, res: 
   }
 });
 
-router.delete('/:id', permissionMiddleware('risk:update'), (req: AuthRequest, res: Response) => {
+router.delete('/:id', checkPermission('risk:delete'), (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     db.risks.delete(id);

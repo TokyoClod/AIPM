@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-03-11
+
+### Added
+
+#### Project Stage Management
+- Stage creation, editing, and deletion
+- Stage status management (pending/in-progress/completed/paused)
+- Drag-and-drop stage reordering
+- Automatic stage transition when required tasks complete
+- Workflow templates with preset stage configurations
+
+#### Team Performance Dashboard
+- Team overall performance metrics (completion rate, per-capita output, on-time delivery)
+- Performance trend charts (weekly/monthly)
+- Member performance list
+- Member comparison functionality
+
+#### Knowledge Base Module
+- Knowledge document creation, editing, deletion
+- Full-text search functionality
+- Category and tag management
+- Project association feature
+- View counting
+
+#### Smart Task Assignment
+- Task assignment recommendations based on skill matching
+- Workload balance suggestions
+- User skill management
+- Comprehensive scoring algorithm (skill 40% + workload 35% + history 25%)
+
+#### Fine-grained Permission Control
+- 16 permission types (project, task, risk, management permissions)
+- Role permission configuration
+- User permission grant/revoke
+- Permission verification middleware
+- Backward compatible with existing roles
+
+#### Backend APIs
+| Module | Endpoints | Description |
+|--------|-----------|-------------|
+| Stages API | 7 | Project stage CRUD, ordering, status management |
+| Templates API | 5 | Workflow template management |
+| Performance API | 6 | Team/personal performance, trends, comparison |
+| Knowledge API | 11 | Document management, search, project association |
+| Smart Assign API | 6 | Recommendations, workload balance, skill management |
+| Permissions API | 8 | Permission management, role configuration |
+
+#### Tests
+- Stages API tests: 21 test cases
+- Knowledge API tests: 27 test cases
+- Smart Assign API tests: 15 test cases
+- Permissions API tests: 18 test cases
+- Total backend tests: 257 (100% pass rate)
+
+---
+
 ## [1.3.0] - 2026-03-10
 
 ### Added

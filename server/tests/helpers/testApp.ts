@@ -20,6 +20,10 @@ export function createTestApp() {
   const aiRouter = createAIRouter();
   const workbenchRouter = createWorkbenchRouter();
   const teamRouter = createTeamRouter();
+  const stagesRouter = createStagesRouter();
+  const knowledgeRouter = createKnowledgeRouter();
+  const smartAssignRouter = createSmartAssignRouter();
+  const permissionsRouter = createPermissionsRouter();
   
   app.use('/api/auth', authRouter);
   app.use('/api/projects', projectsRouter);
@@ -28,6 +32,10 @@ export function createTestApp() {
   app.use('/api/ai', aiRouter);
   app.use('/api/workbench', workbenchRouter);
   app.use('/api/team', teamRouter);
+  app.use('/api/stages', stagesRouter);
+  app.use('/api/knowledge', knowledgeRouter);
+  app.use('/api/smart-assign', smartAssignRouter);
+  app.use('/api/permissions', permissionsRouter);
   
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -1391,4 +1399,837 @@ export function createTestRisk(overrides: any = {}) {
 export async function clearDatabase() {
   const { clearTestDatabase } = await import('./testDb');
   clearTestDatabase();
+}
+
+function createStagesRouter() {
+  const router = express.Router();
+  
+  router.get('/project/:projectId', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { projectId } = req.params;
+    const project = db.projects.findById(projectId);
+    
+    if (!project) {
+      return res.status(404).json({ success: false, message: '项目不存在' });
+    }
+    
+    const stages = db.projectStages.findByProject(projectId);
+    const stagesWithTasks = stages.map((stage: any) => ({
+      ...stage,
+      required_tasks: (stage.required_task_ids || []).map((id: string) => {
+        const task = db.tasks.findById(id);
+        return task ? { ...task, assignee_name: task.assignee_id ? db.users.findById(task.assignee_id)?.name : null } : null;
+      }).filter(Boolean),
+    }));
+    
+    res.json({ success: true, data: stagesWithTasks });
+  });
+  
+  router.post('/', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { project_id, name, required_task_ids, start_date, end_date } = req.body;
+    
+    if (!project_id || !name) {
+      return res.status(400).json({ success: false, message: '项目ID和阶段名称不能为空' });
+    }
+    
+    const project = db.projects.findById(project_id);
+    if (!project) {
+      return res.status(404).json({ success: false, message: '项目不存在' });
+    }
+    
+    const maxOrder = db.projectStages.getMaxOrder(project_id);
+    const id = uuidv4();
+    
+    const stage = db.projectStages.create({
+      id,
+      project_id,
+      name,
+      order_index: maxOrder + 1,
+      status: 'pending',
+      required_task_ids: required_task_ids || [],
+      start_date: start_date || null,
+      end_date: end_date || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    
+    res.status(201).json({ success: true, data: stage });
+  });
+  
+  router.put('/:id', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const { name, required_task_ids, start_date, end_date } = req.body;
+    
+    const stage = db.projectStages.findById(id);
+    if (!stage) {
+      return res.status(404).json({ success: false, message: '阶段不存在' });
+    }
+    
+    const updated = db.projectStages.update(id, {
+      ...(name && { name }),
+      ...(required_task_ids !== undefined && { required_task_ids }),
+      ...(start_date !== undefined && { start_date }),
+      ...(end_date !== undefined && { end_date }),
+      updated_at: new Date().toISOString(),
+    });
+    
+    res.json({ success: true, data: updated });
+  });
+  
+  router.delete('/:id', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const stage = db.projectStages.findById(id);
+    
+    if (!stage) {
+      return res.status(404).json({ success: false, message: '阶段不存在' });
+    }
+    
+    db.projectStages.delete(id);
+    res.json({ success: true, message: '阶段已删除' });
+  });
+  
+  router.put('/:id/status', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!status || !['pending', 'active', 'completed', 'paused'].includes(status)) {
+      return res.status(400).json({ success: false, message: '无效的阶段状态' });
+    }
+    
+    const stage = db.projectStages.findById(id);
+    if (!stage) {
+      return res.status(404).json({ success: false, message: '阶段不存在' });
+    }
+    
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+    
+    if (status === 'active' && !stage.start_date) {
+      updateData.start_date = new Date().toISOString();
+    }
+    
+    if (status === 'completed') {
+      updateData.end_date = new Date().toISOString();
+    }
+    
+    const updated = db.projectStages.update(id, updateData);
+    res.json({ success: true, data: updated });
+  });
+  
+  router.post('/reorder', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { project_id, stage_ids } = req.body;
+    
+    if (!project_id || !Array.isArray(stage_ids)) {
+      return res.status(400).json({ success: false, message: '项目ID和阶段ID列表不能为空' });
+    }
+    
+    stage_ids.forEach((stageId: string, index: number) => {
+      db.projectStages.update(stageId, {
+        order_index: index + 1,
+        updated_at: new Date().toISOString(),
+      });
+    });
+    
+    const stages = db.projectStages.findByProject(project_id);
+    res.json({ success: true, data: stages });
+  });
+  
+  return router;
+}
+
+function createKnowledgeRouter() {
+  const router = express.Router();
+  
+  router.get('/', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { page = 1, pageSize = 10, search, category, tag } = req.query;
+    let knowledgeList = db.knowledgeBase.getAll();
+
+    if (search) {
+      const searchStr = (search as string).toLowerCase();
+      knowledgeList = knowledgeList.filter(k => 
+        k.title.toLowerCase().includes(searchStr) || 
+        k.content.toLowerCase().includes(searchStr)
+      );
+    }
+
+    if (category) {
+      knowledgeList = knowledgeList.filter(k => k.category === category);
+    }
+
+    if (tag) {
+      knowledgeList = knowledgeList.filter(k => k.tags && k.tags.includes(tag as string));
+    }
+
+    knowledgeList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const pageNum = parseInt(page as string);
+    const pageSizeNum = parseInt(pageSize as string);
+    const total = knowledgeList.length;
+    const totalPages = Math.ceil(total / pageSizeNum);
+    const startIndex = (pageNum - 1) * pageSizeNum;
+    const paginatedList = knowledgeList.slice(startIndex, startIndex + pageSizeNum);
+
+    const listWithDetails = paginatedList.map(k => ({
+      ...k,
+      creator_name: db.users.findById(k.creator_id)?.name,
+      project_names: db.knowledgeProjects.findByKnowledge(k.id).map(kp => {
+        const project = db.projects.findById(kp.project_id);
+        return project ? project.name : null;
+      }).filter(Boolean),
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        list: listWithDetails,
+        pagination: {
+          page: pageNum,
+          pageSize: pageSizeNum,
+          total,
+          totalPages,
+        },
+      },
+    });
+  });
+  
+  router.post('/', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { title, content, category, tags, project_ids } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ success: false, message: '标题和内容不能为空' });
+    }
+
+    const id = uuidv4();
+    const knowledge = db.knowledgeBase.create({
+      id,
+      title,
+      content,
+      category: category || null,
+      tags: tags || [],
+      creator_id: (req as any).user.id,
+      view_count: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    if (project_ids && Array.isArray(project_ids)) {
+      project_ids.forEach((projectId: string) => {
+        if (db.projects.findById(projectId)) {
+          db.knowledgeProjects.create({
+            id: uuidv4(),
+            knowledge_id: id,
+            project_id: projectId,
+            created_at: new Date().toISOString(),
+          });
+        }
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...knowledge,
+        creator_name: (req as any).user.name,
+      },
+    });
+  });
+  
+  router.get('/search', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { q, category, tag } = req.query;
+
+    if (!q && !category && !tag) {
+      return res.status(400).json({ success: false, message: '请提供搜索条件' });
+    }
+
+    let results = db.knowledgeBase.getAll();
+
+    if (q) {
+      const queryStr = (q as string).toLowerCase();
+      results = results.filter(k => 
+        k.title.toLowerCase().includes(queryStr) || 
+        k.content.toLowerCase().includes(queryStr)
+      );
+    }
+
+    if (category) {
+      results = results.filter(k => k.category === category);
+    }
+
+    if (tag) {
+      results = results.filter(k => k.tags && k.tags.includes(tag as string));
+    }
+
+    results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const resultsWithDetails = results.map(k => ({
+      ...k,
+      creator_name: db.users.findById(k.creator_id)?.name,
+    }));
+
+    res.json({ success: true, data: resultsWithDetails });
+  });
+  
+  router.get('/categories', authenticateToken, (req: express.Request, res: express.Response) => {
+    const categories = db.knowledgeBase.getCategories();
+    res.json({ success: true, data: categories });
+  });
+  
+  router.get('/tags', authenticateToken, (req: express.Request, res: express.Response) => {
+    const tags = db.knowledgeBase.getTags();
+    res.json({ success: true, data: tags });
+  });
+  
+  router.get('/project/:projectId', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { projectId } = req.params;
+    const { page = 1, pageSize = 10 } = req.query;
+
+    const project = db.projects.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ success: false, message: '项目不存在' });
+    }
+
+    const relations = db.knowledgeProjects.findByProject(projectId);
+    let knowledgeList = relations.map(r => db.knowledgeBase.findById(r.knowledge_id)).filter(Boolean);
+
+    knowledgeList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const pageNum = parseInt(page as string);
+    const pageSizeNum = parseInt(pageSize as string);
+    const total = knowledgeList.length;
+    const totalPages = Math.ceil(total / pageSizeNum);
+    const startIndex = (pageNum - 1) * pageSizeNum;
+    const paginatedList = knowledgeList.slice(startIndex, startIndex + pageSizeNum);
+
+    const listWithDetails = paginatedList.map(k => ({
+      ...k,
+      creator_name: db.users.findById(k.creator_id)?.name,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        list: listWithDetails,
+        pagination: {
+          page: pageNum,
+          pageSize: pageSizeNum,
+          total,
+          totalPages,
+        },
+      },
+    });
+  });
+  
+  router.get('/:id', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const knowledge = db.knowledgeBase.findById(id);
+
+    if (!knowledge) {
+      return res.status(404).json({ success: false, message: '文档不存在' });
+    }
+
+    db.knowledgeBase.update(id, { view_count: (knowledge.view_count || 0) + 1 });
+
+    const projectRelations = db.knowledgeProjects.findByKnowledge(id);
+    const projects = projectRelations.map(r => {
+      const project = db.projects.findById(r.project_id);
+      return project ? { id: project.id, name: project.name } : null;
+    }).filter(Boolean);
+
+    res.json({
+      success: true,
+      data: {
+        ...knowledge,
+        view_count: (knowledge.view_count || 0) + 1,
+        creator_name: db.users.findById(knowledge.creator_id)?.name,
+        projects,
+      },
+    });
+  });
+  
+  router.put('/:id', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const { title, content, category, tags } = req.body;
+
+    const knowledge = db.knowledgeBase.findById(id);
+    if (!knowledge) {
+      return res.status(404).json({ success: false, message: '文档不存在' });
+    }
+
+    if (knowledge.creator_id !== (req as any).user.id && (req as any).user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: '无权修改此文档' });
+    }
+
+    const updated = db.knowledgeBase.update(id, {
+      ...(title && { title }),
+      ...(content && { content }),
+      ...(category !== undefined && { category }),
+      ...(tags && { tags }),
+      updated_at: new Date().toISOString(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        ...updated,
+        creator_name: db.users.findById(updated!.creator_id)?.name,
+      },
+    });
+  });
+  
+  router.delete('/:id', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const knowledge = db.knowledgeBase.findById(id);
+
+    if (!knowledge) {
+      return res.status(404).json({ success: false, message: '文档不存在' });
+    }
+
+    if (knowledge.creator_id !== (req as any).user.id && (req as any).user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: '无权删除此文档' });
+    }
+
+    db.knowledgeBase.delete(id);
+    res.json({ success: true, message: '文档已删除' });
+  });
+  
+  router.post('/:id/link-project', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const { project_id } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({ success: false, message: '项目ID不能为空' });
+    }
+
+    const knowledge = db.knowledgeBase.findById(id);
+    if (!knowledge) {
+      return res.status(404).json({ success: false, message: '文档不存在' });
+    }
+
+    const project = db.projects.findById(project_id);
+    if (!project) {
+      return res.status(404).json({ success: false, message: '项目不存在' });
+    }
+
+    const existingRelation = db.knowledgeProjects.findByKnowledge(id).find(r => r.project_id === project_id);
+    if (existingRelation) {
+      return res.status(400).json({ success: false, message: '文档已关联此项目' });
+    }
+
+    const relation = db.knowledgeProjects.create({
+      id: uuidv4(),
+      knowledge_id: id,
+      project_id,
+      created_at: new Date().toISOString(),
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...relation,
+        project_name: project.name,
+      },
+    });
+  });
+  
+  router.delete('/:id/link-project/:projectId', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id, projectId } = req.params;
+
+    const deleted = db.knowledgeProjects.delete(id, projectId);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: '关联关系不存在' });
+    }
+
+    res.json({ success: true, message: '已取消关联' });
+  });
+  
+  return router;
+}
+
+function createSmartAssignRouter() {
+  const router = express.Router();
+  
+  router.get('/recommend', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { task_id, project_id } = req.query;
+
+    if (!task_id && !project_id) {
+      return res.status(400).json({ success: false, message: '任务ID或项目ID不能为空' });
+    }
+
+    let targetTasks: any[] = [];
+    
+    if (task_id) {
+      const task = db.tasks.findById(task_id as string);
+      if (!task) {
+        return res.status(404).json({ success: false, message: '任务不存在' });
+      }
+      targetTasks = [task];
+    } else if (project_id) {
+      targetTasks = db.tasks.findByProject(project_id as string).filter(t => !t.assignee_id);
+    }
+
+    const projectMembers = project_id 
+      ? db.project_members.findByProject(project_id as string)
+      : (task_id ? db.project_members.findByProject(targetTasks[0].project_id) : []);
+
+    if (projectMembers.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const recommendations = targetTasks.map(task => {
+      const memberScores = projectMembers.map(member => {
+        const user = db.users.findById(member.user_id);
+        if (!user) return null;
+
+        const userSkills = db.userSkills.findByUser(member.user_id);
+        const skillMatchScore = calculateSkillMatchScore(task, userSkills);
+        const workloadScore = calculateWorkloadScore(member.user_id);
+        const performanceScore = calculatePerformanceScore(member.user_id);
+        const totalScore = skillMatchScore * 0.4 + workloadScore * 0.35 + performanceScore * 0.25;
+
+        return {
+          user_id: member.user_id,
+          user_name: user.name,
+          user_email: user.email,
+          skill_match_score: skillMatchScore,
+          workload_score: workloadScore,
+          performance_score: performanceScore,
+          total_score: totalScore,
+          current_tasks: db.tasks.findByAssignee(member.user_id).filter(t => t.status !== 'completed').length,
+        };
+      }).filter(Boolean).sort((a: any, b: any) => b.total_score - a.total_score);
+
+      return {
+        task_id: task.id,
+        task_title: task.title,
+        recommendations: memberScores.slice(0, 5),
+      };
+    });
+
+    res.json({ success: true, data: recommendations });
+  });
+  
+  router.get('/workload-balance', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { project_id } = req.query;
+
+    if (!project_id) {
+      return res.status(400).json({ success: false, message: '项目ID不能为空' });
+    }
+
+    const projectMembers = db.project_members.findByProject(project_id as string);
+    
+    if (projectMembers.length === 0) {
+      return res.json({ success: true, data: { is_balanced: true, suggestions: [] } });
+    }
+
+    const workloadData = projectMembers.map(member => {
+      const user = db.users.findById(member.user_id);
+      const userTasks = db.tasks.findByAssignee(member.user_id).filter(
+        t => t.project_id === project_id && t.status !== 'completed'
+      );
+
+      return {
+        user_id: member.user_id,
+        user_name: user?.name || 'Unknown',
+        active_tasks: userTasks.length,
+        task_ids: userTasks.map(t => t.id),
+      };
+    });
+
+    const taskCounts = workloadData.map(w => w.active_tasks);
+    const avgWorkload = taskCounts.reduce((a, b) => a + b, 0) / taskCounts.length;
+    const maxWorkload = Math.max(...taskCounts);
+    const minWorkload = Math.min(...taskCounts);
+
+    const isBalanced = maxWorkload - minWorkload <= 2;
+
+    res.json({
+      success: true,
+      data: {
+        is_balanced: isBalanced,
+        average_workload: avgWorkload.toFixed(1),
+        max_workload: maxWorkload,
+        min_workload: minWorkload,
+        workload_distribution: workloadData,
+        suggestions: [],
+      },
+    });
+  });
+  
+  router.post('/skills', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { user_id, skill_name, proficiency_level } = req.body;
+
+    if (!user_id || !skill_name) {
+      return res.status(400).json({ success: false, message: '用户ID和技能名称不能为空' });
+    }
+
+    const user = db.users.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const existingSkills = db.userSkills.findByUser(user_id);
+    const existingSkill = existingSkills.find(
+      s => s.skill_name.toLowerCase() === skill_name.toLowerCase()
+    );
+
+    if (existingSkill) {
+      return res.status(400).json({ success: false, message: '该用户已拥有此技能' });
+    }
+
+    const id = uuidv4();
+    const skill = db.userSkills.create({
+      id,
+      user_id,
+      skill_name,
+      proficiency_level: proficiency_level || 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    res.status(201).json({ success: true, data: skill });
+  });
+  
+  router.get('/skills/:userId', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { userId } = req.params;
+    
+    const user = db.users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const skills = db.userSkills.findByUser(userId);
+    
+    res.json({ success: true, data: skills });
+  });
+  
+  router.put('/skills/:id', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const { skill_name, proficiency_level } = req.body;
+
+    const skill = db.userSkills.findById(id);
+    if (!skill) {
+      return res.status(404).json({ success: false, message: '技能不存在' });
+    }
+
+    const updated = db.userSkills.update(id, {
+      ...(skill_name && { skill_name }),
+      ...(proficiency_level !== undefined && { proficiency_level }),
+      updated_at: new Date().toISOString(),
+    });
+
+    res.json({ success: true, data: updated });
+  });
+  
+  router.delete('/skills/:id', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+
+    const skill = db.userSkills.findById(id);
+    if (!skill) {
+      return res.status(404).json({ success: false, message: '技能不存在' });
+    }
+
+    db.userSkills.delete(id);
+    res.json({ success: true, message: '技能已删除' });
+  });
+  
+  return router;
+}
+
+function calculateSkillMatchScore(task: any, userSkills: any[]): number {
+  if (!userSkills || userSkills.length === 0) return 0;
+  return 50;
+}
+
+function calculateWorkloadScore(userId: string): number {
+  const userTasks = db.tasks.findByAssignee(userId);
+  const activeTasks = userTasks.filter(t => 
+    t.status === 'pending' || t.status === 'in_progress'
+  );
+
+  const taskCount = activeTasks.length;
+  
+  if (taskCount === 0) return 100;
+  if (taskCount === 1) return 90;
+  if (taskCount === 2) return 75;
+  if (taskCount === 3) return 60;
+  if (taskCount === 4) return 40;
+  
+  return Math.max(10, 40 - (taskCount - 4) * 10);
+}
+
+function calculatePerformanceScore(userId: string): number {
+  const userTasks = db.tasks.findByAssignee(userId);
+  
+  if (userTasks.length === 0) return 70;
+
+  const completedTasks = userTasks.filter(t => t.status === 'completed');
+  
+  if (completedTasks.length === 0) return 50;
+
+  let onTimeCount = 0;
+  completedTasks.forEach(task => {
+    if (task.end_date && task.updated_at) {
+      const endDate = new Date(task.end_date);
+      const completedDate = new Date(task.updated_at);
+      if (completedDate <= endDate) {
+        onTimeCount++;
+      }
+    }
+  });
+
+  const onTimeRate = onTimeCount / completedTasks.length;
+  
+  return Math.round(onTimeRate * 100);
+}
+
+function createPermissionsRouter() {
+  const router = express.Router();
+  
+  router.get('/', authenticateToken, (req: express.Request, res: express.Response) => {
+    const permissions = db.permissions.getAll();
+    res.json({ success: true, data: permissions });
+  });
+  
+  router.get('/roles', authenticateToken, (req: express.Request, res: express.Response) => {
+    const roles = [
+      { id: 'admin', name: '管理员', permissions: [] },
+      { id: 'manager', name: '项目经理', permissions: [] },
+      { id: 'leader', name: '组长', permissions: [] },
+      { id: 'member', name: '成员', permissions: [] },
+    ];
+
+    res.json({ success: true, data: roles });
+  });
+  
+  router.put('/roles/:roleId', authenticateToken, requireAdmin, (req: express.Request, res: express.Response) => {
+    const { roleId } = req.params;
+    const { permissions } = req.body;
+
+    if (!['admin', 'manager', 'leader', 'member'].includes(roleId)) {
+      return res.status(400).json({ success: false, message: '无效的角色' });
+    }
+
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ success: false, message: '权限列表格式错误' });
+    }
+
+    res.json({ success: true, message: '角色权限已更新' });
+  });
+  
+  router.get('/users/:userId', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { userId } = req.params;
+
+    if ((req as any).user.role !== 'admin' && (req as any).user.id !== userId) {
+      return res.status(403).json({ success: false, message: '权限不足' });
+    }
+
+    const user = db.users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const userPermissions = db.userPermissions.findByUser(userId);
+
+    res.json({ 
+      success: true, 
+      data: {
+        user_id: userId,
+        role: user.role,
+        permissions: userPermissions.map(up => {
+          const perm = db.permissions.findById(up.permission_id);
+          return {
+            code: perm?.code,
+            name: perm?.name,
+            resource_type: perm?.resource_type,
+            operation: perm?.operation,
+            is_custom: true,
+            resource_id: up.resource_id,
+          };
+        }),
+      }
+    });
+  });
+  
+  router.put('/users/:userId', authenticateToken, requireAdmin, (req: express.Request, res: express.Response) => {
+    const { userId } = req.params;
+    const { permissions } = req.body;
+
+    const user = db.users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ success: false, message: '权限列表格式错误' });
+    }
+
+    res.json({ success: true, message: '用户权限已更新' });
+  });
+  
+  router.get('/check', authenticateToken, (req: express.Request, res: express.Response) => {
+    const { permission, resource_id } = req.query;
+
+    if (!permission) {
+      return res.status(400).json({ success: false, message: '缺少权限代码' });
+    }
+
+    const hasPermission = (req as any).user.role === 'admin';
+
+    res.json({ 
+      success: true, 
+      data: { 
+        has_permission: hasPermission,
+        permission,
+        resource_id: resource_id || null,
+      }
+    });
+  });
+  
+  router.post('/grant', authenticateToken, requireAdmin, (req: express.Request, res: express.Response) => {
+    const { user_id, permission_code, resource_id } = req.body;
+
+    if (!user_id || !permission_code) {
+      return res.status(400).json({ success: false, message: '缺少必要参数' });
+    }
+
+    const user = db.users.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const perm = db.permissions.findByCode(permission_code);
+    if (!perm) {
+      return res.status(404).json({ success: false, message: '权限不存在' });
+    }
+
+    const userPerm = db.userPermissions.create({
+      id: uuidv4(),
+      user_id,
+      permission_id: perm.id,
+      resource_id: resource_id || null,
+      granted: true,
+      granted_by: (req as any).user.id,
+      created_at: new Date().toISOString(),
+    });
+
+    res.status(201).json({ success: true, data: userPerm });
+  });
+  
+  router.post('/revoke', authenticateToken, requireAdmin, (req: express.Request, res: express.Response) => {
+    const { user_id, permission_code, resource_id } = req.body;
+
+    if (!user_id || !permission_code) {
+      return res.status(400).json({ success: false, message: '缺少必要参数' });
+    }
+
+    const perm = db.permissions.findByCode(permission_code);
+    if (!perm) {
+      return res.status(404).json({ success: false, message: '权限不存在' });
+    }
+
+    res.json({ success: true, message: '权限已撤销' });
+  });
+  
+  return router;
 }

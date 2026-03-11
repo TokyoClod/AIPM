@@ -18,6 +18,8 @@ import TaskDetail from './pages/TaskDetail';
 import Risks from './pages/Risks';
 import RiskAlerts from './pages/RiskAlerts';
 import Admin from './pages/Admin';
+import Performance from './pages/Performance';
+import Knowledge from './pages/Knowledge';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -103,6 +105,8 @@ function App() {
                   <Route path="/projects/:id" element={<ProjectDetail />} />
                   <Route path="/tasks" element={<Tasks />} />
                   <Route path="/tasks/:id" element={<TaskDetail />} />
+                  <Route path="/performance" element={<Performance />} />
+                  <Route path="/knowledge" element={<Knowledge />} />
                   <Route path="/risks" element={<Risks />} />
                   <Route path="/risk-alerts" element={<RiskAlerts />} />
                   <Route path="/admin" element={<Admin />} />

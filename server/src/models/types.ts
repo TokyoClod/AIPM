@@ -195,3 +195,32 @@ export interface ReportContent {
     riskTrend: number[];
   };
 }
+
+export interface ProjectStage {
+  id: string;
+  project_id: string;
+  name: string;
+  order_index: number;
+  status: 'pending' | 'active' | 'completed' | 'paused';
+  required_task_ids: string[];
+  start_date?: string;
+  end_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  stages: WorkflowTemplateStage[];
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowTemplateStage {
+  name: string;
+  order_index: number;
+  required_task_ids?: string[];
+}

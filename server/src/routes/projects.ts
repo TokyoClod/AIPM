@@ -1,13 +1,14 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/database.js';
-import { AuthRequest, authMiddleware, ROLES, permissionMiddleware } from '../middleware/auth.js';
+import { AuthRequest, authMiddleware, ROLES } from '../middleware/auth.js';
+import { checkPermission } from '../middleware/permission.js';
 
 const router = Router();
 
 router.use(authMiddleware);
 
-router.get('/', (req: AuthRequest, res: Response) => {
+router.get('/', checkPermission('project:view'), (req: AuthRequest, res: Response) => {
   try {
     let projects = db.projects.getAll();
     
@@ -30,7 +31,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/', permissionMiddleware('project:create'), (req: AuthRequest, res: Response) => {
+router.post('/', checkPermission('project:view'), (req: AuthRequest, res: Response) => {
   try {
     const { name, description, start_date, end_date } = req.body;
 
@@ -99,7 +100,7 @@ router.get('/:id', (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/:id', permissionMiddleware('project:update'), (req: AuthRequest, res: Response) => {
+router.put('/:id', checkPermission('project:edit'), (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { name, description, start_date, end_date, status } = req.body;
@@ -125,7 +126,7 @@ router.put('/:id', permissionMiddleware('project:update'), (req: AuthRequest, re
   }
 });
 
-router.delete('/:id', permissionMiddleware('project:delete'), (req: AuthRequest, res: Response) => {
+router.delete('/:id', checkPermission('project:delete'), (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const project = db.projects.findById(id);

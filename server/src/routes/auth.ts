@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/database.js';
 import { AuthRequest, ROLES } from '../middleware/auth.js';
+import { checkPermission } from '../middleware/permission.js';
 
 const router = Router();
 
@@ -157,12 +158,8 @@ router.get('/users', (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/users/:id/role', (req: AuthRequest, res: Response) => {
+router.put('/users/:id/role', checkPermission('permission:manage'), (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user || req.user.role !== ROLES.ADMIN) {
-      return res.status(403).json({ success: false, message: '权限不足' });
-    }
-
     const { id } = req.params;
     const { role } = req.body;
 

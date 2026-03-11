@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { initializeDatabase } from './models/database.js';
+import { initializePermissions } from './middleware/permission.js';
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
 import taskRoutes from './routes/tasks.js';
@@ -10,6 +11,11 @@ import notificationRoutes from './routes/notifications.js';
 import reportRoutes from './routes/reports.js';
 import aiRoutes from './routes/ai.js';
 import teamRoutes from './routes/team.js';
+import stageRoutes from './routes/stages.js';
+import templateRoutes from './routes/templates.js';
+import smartAssignRoutes from './routes/smart-assign.js';
+import knowledgeRoutes from './routes/knowledge.js';
+import permissionRoutes from './routes/permissions.js';
 import { schedulerService } from './services/scheduler.service.js';
 
 const app = express();
@@ -22,6 +28,7 @@ app.use(cors({
 app.use(express.json());
 
 initializeDatabase();
+initializePermissions();
 
 // 启动定时任务调度器
 schedulerService.start();
@@ -34,6 +41,11 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/stages', stageRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/smart-assign', smartAssignRoutes);
+app.use('/api/knowledge', knowledgeRoutes);
+app.use('/api/permissions', permissionRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

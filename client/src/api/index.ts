@@ -139,4 +139,70 @@ export const teamApi = {
   sendMessage: (data: any) => api.post('/team/messages', data),
 };
 
+export const stagesApi = {
+  getProjectStages: (projectId: string) => api.get(`/projects/${projectId}/stages`),
+  createStage: (projectId: string, data: any) => api.post(`/projects/${projectId}/stages`, data),
+  updateStage: (projectId: string, stageId: string, data: any) => 
+    api.put(`/projects/${projectId}/stages/${stageId}`, data),
+  deleteStage: (projectId: string, stageId: string) => 
+    api.delete(`/projects/${projectId}/stages/${stageId}`),
+  updateStageStatus: (projectId: string, stageId: string, status: string) => 
+    api.put(`/projects/${projectId}/stages/${stageId}/status`, { status }),
+  reorderStages: (projectId: string, stageIds: string[]) => 
+    api.put(`/projects/${projectId}/stages/reorder`, { stage_ids: stageIds }),
+};
+
+export const templatesApi = {
+  getTemplates: () => api.get('/templates'),
+  createTemplate: (data: any) => api.post('/templates', data),
+  getTemplate: (id: string) => api.get(`/templates/${id}`),
+  deleteTemplate: (id: string) => api.delete(`/templates/${id}`),
+  applyTemplate: (projectId: string, templateId: string) => 
+    api.post(`/templates/${templateId}/apply`, { project_id: projectId }),
+};
+
+export const performanceApi = {
+  getTeamPerformance: () => api.get('/performance/team'),
+  getTeamTrends: (period: 'week' | 'month') => api.get('/performance/team/trends', { params: { period } }),
+  getMembersPerformance: () => api.get('/performance/members'),
+  getMemberPerformance: (memberId: string) => api.get(`/performance/members/${memberId}`),
+  compareMembers: (memberIds: string[]) => api.post('/performance/members/compare', { member_ids: memberIds }),
+};
+
+export const knowledgeApi = {
+  getList: (params?: any) => api.get('/knowledge', { params }),
+  create: (data: any) => api.post('/knowledge', data),
+  getDetail: (id: string) => api.get(`/knowledge/${id}`),
+  update: (id: string, data: any) => api.put(`/knowledge/${id}`, data),
+  delete: (id: string) => api.delete(`/knowledge/${id}`),
+  search: (keyword: string) => api.get('/knowledge/search', { params: { keyword } }),
+  getByProject: (projectId: string) => api.get(`/knowledge/project/${projectId}`),
+  linkProject: (knowledgeId: string, projectId: string) => 
+    api.post(`/knowledge/${knowledgeId}/link-project`, { project_id: projectId }),
+  getCategories: () => api.get('/knowledge/categories'),
+  getTags: () => api.get('/knowledge/tags'),
+};
+
+export const smartAssignApi = {
+  getRecommendations: (taskId: string) => api.get(`/smart-assign/task/${taskId}/recommendations`),
+  getWorkloadBalance: () => api.get('/smart-assign/workload-balance'),
+  addSkill: (userId: string, skill: string, level: number) => 
+    api.post(`/smart-assign/skills`, { user_id: userId, skill, level }),
+  getUserSkills: (userId: string) => api.get(`/smart-assign/skills/${userId}`),
+  updateSkill: (skillId: string, level: number) => 
+    api.put(`/smart-assign/skills/${skillId}`, { level }),
+  deleteSkill: (skillId: string) => api.delete(`/smart-assign/skills/${skillId}`),
+};
+
+export const permissionsApi = {
+  getAll: () => api.get('/permissions'),
+  getRolePermissions: (roleId: string) => api.get(`/permissions/roles/${roleId}`),
+  updateRolePermissions: (roleId: string, permissions: string[]) => 
+    api.put(`/permissions/roles/${roleId}`, { permissions }),
+  getUserPermissions: (userId: string) => api.get(`/permissions/users/${userId}`),
+  updateUserPermissions: (userId: string, permissions: string[]) => 
+    api.put(`/permissions/users/${userId}`, { permissions }),
+  checkPermission: (permission: string) => api.post('/permissions/check', { permission }),
+};
+
 export default api;

@@ -1,8 +1,8 @@
 # AIPM 项目交接文档
 
-> 最后更新：2026-03-10 22:30
-> 当前版本：v1.3.0
-> 当前状态：核心功能优化完成，代码已推送到GitHub
+> 最后更新：2026-03-11
+> 当前版本：v1.4.0
+> 当前状态：全面功能优化完成，代码已推送到GitHub
 
 ---
 
@@ -21,61 +21,86 @@
 ### 1.2 核心功能
 - ✅ 多项目并行管理
 - ✅ 多级任务层级划分
-- ✅ 多用户权限控制 (RBAC)
+- ✅ 多用户权限控制 (RBAC) + **细粒度权限控制**
 - ✅ 三种可视化视图（列表/看板/甘特图）
 - ✅ 风险标记与预警
 - ✅ AI智能助手（多模型支持）
 - ✅ 快速录入与语音输入
 - ✅ 自动化通知与邮件系统
 - ✅ 响应式 UI 设计 + 暗色主题
-- ✅ **个人工作台** (v1.3.0新增)
-- ✅ **团队协作看板** (v1.3.0新增)
-- ✅ **智能提醒系统** (v1.3.0新增)
+- ✅ 个人工作台
+- ✅ 团队协作看板
+- ✅ 智能提醒系统
+- ✅ **项目阶段管理** (v1.4.0新增)
+- ✅ **项目流程模板** (v1.4.0新增)
+- ✅ **团队绩效仪表盘** (v1.4.0新增)
+- ✅ **知识库模块** (v1.4.0新增)
+- ✅ **智能任务分配** (v1.4.0新增)
 
 ---
 
 ## 二、版本更新记录
 
-### v1.3.0 (2026-03-10)
+### v1.4.0 (2026-03-11)
 
 #### 新增功能
 
-##### 1. 个人工作台
-- 待办事项聚合展示（按优先级和截止日期排序）
-- 今日日程卡片
-- 效率统计（本周完成数、按时完成率、平均响应时间）
-- 快捷操作入口
+##### 1. 项目阶段管理
+- 阶段创建、编辑、删除
+- 阶段状态管理（待开始/进行中/已完成/已暂停）
+- 阶段拖拽排序
+- 阶段自动流转（必完成任务完成时自动推进）
+- 项目流程模板（预设阶段配置）
 
-##### 2. 团队协作看板
-- 团队成员状态实时展示
-- 任务负载可视化（进度条显示负载百分比）
-- 预警状态标识（红色边框表示过载）
-- 在线状态指示器
-- 团队消息功能
+##### 2. 团队绩效仪表盘
+- 团队整体绩效指标（完成率、人均产出、按时交付率）
+- 绩效趋势图表（按周/月）
+- 成员绩效列表
+- 成员绩效对比功能
 
-##### 3. 智能提醒系统
-- 截止日期提醒（24小时内）
-- 优先级变更提醒
-- 任务分配提醒
+##### 3. 知识库模块
+- 知识文档创建、编辑、删除
+- 全文检索功能
+- 分类和标签管理
+- 项目关联功能
+- 浏览计数
+
+##### 4. 智能任务分配
+- 基于技能匹配的任务分配推荐
+- 负载均衡建议
+- 用户技能管理
+- 综合评分算法（技能40% + 负载35% + 历史25%）
+
+##### 5. 细粒度权限控制
+- 16种权限类型（项目、任务、风险、管理权限）
+- 角色权限配置
+- 用户权限授予/撤销
+- 权限验证中间件
+- 向后兼容现有角色
 
 #### 后端API新增
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | /api/workbench | 获取工作台概览 |
-| GET | /api/workbench/todos | 获取待办事项 |
-| GET | /api/workbench/schedule | 获取日程安排 |
-| GET | /api/workbench/stats | 获取效率统计 |
-| PUT | /api/workbench/todos/:id/complete | 完成待办事项 |
-| GET | /api/team/status | 获取团队状态 |
-| GET | /api/team/:userId/workload | 获取成员负载 |
-| GET | /api/team/workload-summary | 获取负载汇总 |
-| POST | /api/team/messages | 发送团队消息 |
-| GET | /api/team/messages | 获取消息列表 |
+| 模块 | 端点数 | 描述 |
+|------|--------|------|
+| 阶段管理API | 7 | 项目阶段CRUD、排序、状态管理 |
+| 模板API | 5 | 流程模板管理 |
+| 绩效API | 6 | 团队/个人绩效、趋势、对比 |
+| 知识库API | 11 | 文档管理、搜索、项目关联 |
+| 智能分配API | 6 | 推荐、负载均衡、技能管理 |
+| 权限API | 8 | 权限管理、角色配置 |
 
 #### 测试覆盖
-- 新增工作台API测试：19个用例
-- 新增团队API测试：28个用例
-- 总测试用例：176个（全部通过）
+- 新增阶段管理API测试：21个用例
+- 新增知识库API测试：27个用例
+- 新增智能分配API测试：15个用例
+- 新增权限API测试：18个用例
+- 总测试用例：257个
+
+### v1.3.0 (2026-03-10)
+
+#### 新增功能
+- 个人工作台（待办聚合、日程管理、效率统计）
+- 团队协作看板（成员状态、负载可视化、预警标识）
+- 智能提醒系统（截止日期提醒、优先级变更通知）
 
 ### v1.2.0 (2026-03-10)
 
@@ -87,13 +112,6 @@
 - AI助手浮动按钮 + 呼吸光效
 - 全局动画系统
 - Plus Jakarta Sans现代字体
-
-### v1.1.0 (2026-03-10)
-
-#### 测试改进
-- 全面系统测试覆盖所有功能模块
-- 后端API测试通过率99.2%
-- 前端组件测试通过率95%
 
 ---
 
@@ -109,25 +127,39 @@ AIPM/
 │   │   │   ├── tasks.ts    # 任务路由
 │   │   │   ├── risks.ts    # 风险路由
 │   │   │   ├── ai.ts       # AI路由
-│   │   │   ├── workbench.ts # 工作台路由 (v1.3.0)
-│   │   │   └── team.ts     # 团队路由 (v1.3.0)
+│   │   │   ├── workbench.ts # 工作台路由
+│   │   │   ├── team.ts     # 团队路由
+│   │   │   ├── stages.ts   # 阶段管理路由 (v1.4.0)
+│   │   │   ├── templates.ts # 模板路由 (v1.4.0)
+│   │   │   ├── performance.ts # 绩效路由 (v1.4.0)
+│   │   │   ├── knowledge.ts # 知识库路由 (v1.4.0)
+│   │   │   ├── smart-assign.ts # 智能分配路由 (v1.4.0)
+│   │   │   └── permissions.ts # 权限路由 (v1.4.0)
 │   │   ├── models/         # 数据模型
 │   │   ├── middleware/     # 中间件
+│   │   │   └── permission.ts # 权限中间件 (v1.4.0)
 │   │   └── index.ts        # 入口文件
 │   ├── tests/              # 测试文件
 │   │   └── integration/    # 集成测试
-│   │       ├── workbench.test.ts (v1.3.0)
-│   │       └── team.test.ts (v1.3.0)
+│   │       ├── stages.test.ts (v1.4.0)
+│   │       ├── knowledge.test.ts (v1.4.0)
+│   │       ├── smart-assign.test.ts (v1.4.0)
+│   │       └── permissions.test.ts (v1.4.0)
 │   └── package.json
 ├── client/                 # 前端代码
 │   ├── src/
 │   │   ├── pages/         # 页面组件
-│   │   │   ├── Workbench.tsx # 个人工作台 (v1.3.0)
-│   │   │   ├── Team.tsx   # 团队协作 (v1.3.0)
+│   │   │   ├── Workbench.tsx # 个人工作台
+│   │   │   ├── Team.tsx   # 团队协作
+│   │   │   ├── Performance.tsx # 绩效仪表盘 (v1.4.0)
+│   │   │   ├── Knowledge.tsx # 知识库 (v1.4.0)
 │   │   │   ├── Dashboard.tsx
 │   │   │   ├── Projects.tsx
 │   │   │   └── ...
 │   │   ├── components/    # UI组件
+│   │   │   ├── ProjectStages.tsx # 阶段管理 (v1.4.0)
+│   │   │   ├── SmartAssign.tsx # 智能分配 (v1.4.0)
+│   │   │   └── ...
 │   │   ├── stores/        # 状态管理
 │   │   ├── api/           # API客户端
 │   │   └── index.css      # 全局样式
@@ -191,31 +223,65 @@ npm run dev
 | PUT | /api/projects/:id | 更新项目 |
 | DELETE | /api/projects/:id | 删除项目 |
 
-### 任务接口
+### 阶段管理接口 (v1.4.0新增)
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| GET | /api/tasks | 获取任务列表 |
-| POST | /api/tasks | 创建任务 |
-| PUT | /api/tasks/:id | 更新任务 |
-| DELETE | /api/tasks/:id | 删除任务 |
+| GET | /api/stages/project/:projectId | 获取项目阶段 |
+| POST | /api/stages | 创建阶段 |
+| PUT | /api/stages/:id | 更新阶段 |
+| DELETE | /api/stages/:id | 删除阶段 |
+| PUT | /api/stages/:id/status | 更新阶段状态 |
+| POST | /api/stages/reorder | 阶段排序 |
 
-### 工作台接口 (v1.3.0新增)
+### 模板接口 (v1.4.0新增)
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| GET | /api/workbench | 获取工作台概览 |
-| GET | /api/workbench/todos | 获取待办事项 |
-| GET | /api/workbench/schedule | 获取日程安排 |
-| GET | /api/workbench/stats | 获取效率统计 |
-| PUT | /api/workbench/todos/:id/complete | 完成待办事项 |
+| GET | /api/templates | 获取模板列表 |
+| POST | /api/templates | 创建模板 |
+| GET | /api/templates/:id | 获取模板详情 |
+| DELETE | /api/templates/:id | 删除模板 |
+| POST | /api/templates/apply/:id | 应用模板到项目 |
 
-### 团队接口 (v1.3.0新增)
+### 绩效接口 (v1.4.0新增)
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| GET | /api/team/status | 获取团队状态 |
-| GET | /api/team/:userId/workload | 获取成员负载 |
-| GET | /api/team/workload-summary | 获取负载汇总 |
-| POST | /api/team/messages | 发送团队消息 |
-| GET | /api/team/messages | 获取消息列表 |
+| GET | /api/performance/team | 获取团队绩效 |
+| GET | /api/performance/team/trends | 获取绩效趋势 |
+| GET | /api/performance/members | 获取成员绩效列表 |
+| GET | /api/performance/members/:userId | 获取成员绩效详情 |
+| GET | /api/performance/compare | 成员绩效对比 |
+
+### 知识库接口 (v1.4.0新增)
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | /api/knowledge | 获取知识库列表 |
+| POST | /api/knowledge | 创建知识文档 |
+| GET | /api/knowledge/:id | 获取文档详情 |
+| PUT | /api/knowledge/:id | 更新文档 |
+| DELETE | /api/knowledge/:id | 删除文档 |
+| GET | /api/knowledge/search | 全文检索 |
+| GET | /api/knowledge/project/:projectId | 获取项目关联文档 |
+| POST | /api/knowledge/:id/link-project | 关联项目 |
+
+### 智能分配接口 (v1.4.0新增)
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | /api/smart-assign/recommend | 获取分配推荐 |
+| GET | /api/smart-assign/workload-balance | 获取负载均衡建议 |
+| POST | /api/smart-assign/skills | 添加用户技能 |
+| GET | /api/smart-assign/skills/:userId | 获取用户技能 |
+| PUT | /api/smart-assign/skills/:id | 更新技能 |
+| DELETE | /api/smart-assign/skills/:id | 删除技能 |
+
+### 权限接口 (v1.4.0新增)
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | /api/permissions | 获取权限列表 |
+| GET | /api/permissions/roles | 获取角色权限 |
+| PUT | /api/permissions/roles/:roleId | 更新角色权限 |
+| GET | /api/permissions/users/:userId | 获取用户权限 |
+| PUT | /api/permissions/users/:userId | 更新用户权限 |
+| GET | /api/permissions/check | 检查权限 |
 
 ---
 
@@ -223,38 +289,72 @@ npm run dev
 
 ### 6.1 测试概览
 
-| 测试类型 | 框架 | 用例数 | 通过 | 通过率 |
-|---------|------|--------|------|--------|
-| 后端API测试 | Jest + Supertest | 176 | 176 | 100% |
-| 前端组件测试 | Vitest + Testing Library | 139 | 132 | 95% |
+| 测试类型 | 框架 | 用例数 | 通过率 |
+|---------|------|--------|--------|
+| 后端API测试 | Jest + Supertest | 257 | 100% |
+| 前端组件测试 | Vitest + Testing Library | 139 | 95% |
 
-### 6.2 新功能测试覆盖
-- 工作台API测试：19个用例（全部通过）
-- 团队API测试：28个用例（全部通过）
+### 6.2 新功能测试覆盖 (v1.4.0)
+- 阶段管理API测试：21个用例
+- 知识库API测试：27个用例
+- 智能分配API测试：15个用例
+- 权限API测试：18个用例
 
 ---
 
-## 七、已知问题与改进方向
+## 七、权限系统说明
 
-### 7.1 已知问题
+### 7.1 权限类型
+
+| 权限代码 | 权限名称 | 资源类型 |
+|---------|---------|---------|
+| project:view | 查看项目 | project |
+| project:edit | 编辑项目 | project |
+| project:delete | 删除项目 | project |
+| project:archive | 归档项目 | project |
+| task:create | 创建任务 | task |
+| task:edit | 编辑任务 | task |
+| task:delete | 删除任务 | task |
+| task:assign | 分配任务 | task |
+| task:comment | 评论任务 | task |
+| risk:create | 创建风险 | risk |
+| risk:edit | 编辑风险 | risk |
+| risk:delete | 删除风险 | risk |
+| risk:assess | 评估风险 | risk |
+| member:manage | 管理成员 | member |
+| permission:manage | 管理权限 | permission |
+| system:settings | 系统设置 | system |
+
+### 7.2 默认角色权限
+
+| 角色 | 权限范围 |
+|------|---------|
+| admin | 所有权限 |
+| manager | 项目、任务、风险的所有权限 |
+| leader | 查看、编辑、创建权限 |
+| member | 查看和评论权限 |
+
+---
+
+## 八、已知问题与改进方向
+
+### 8.1 已知问题
 - 部分前端测试用例因异步超时失败（不影响功能）
 - 数据存储使用JSON文件，不适合大规模生产环境
 
-### 7.2 改进方向
+### 8.2 改进方向
 - [ ] 迁移到关系型数据库（PostgreSQL/MySQL）
 - [ ] 添加WebSocket实时通信
-- [ ] 实现项目流程模板功能
-- [ ] 实现知识库模块
-- [ ] 实现细粒度权限控制
-- [ ] 添加更多AI模型支持
+- [ ] 实现更多AI模型支持
+- [ ] 添加移动端应用
 
 ---
 
-## 八、联系与支持
+## 九、联系与支持
 
 - **GitHub仓库**: https://github.com/TokyoClod/AIPM
 - **Issues**: https://github.com/TokyoClod/AIPM/issues
 
 ---
 
-*文档最后更新：2026-03-10 22:30*
+*文档最后更新：2026-03-11*

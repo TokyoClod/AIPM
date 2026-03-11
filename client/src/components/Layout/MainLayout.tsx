@@ -15,7 +15,9 @@ import {
   BulbOutlined,
   BulbFilled,
   DesktopOutlined,
-  TeamOutlined
+  TeamOutlined,
+  BarChartOutlined,
+  BookOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -37,6 +39,8 @@ const menuItems = [
   { key: '/team', icon: <TeamOutlined />, label: '团队协作' },
   { key: '/projects', icon: <ProjectOutlined />, label: '项目管理' },
   { key: '/tasks', icon: <FileTextOutlined />, label: '任务管理' },
+  { key: '/performance', icon: <BarChartOutlined />, label: '绩效仪表盘' },
+  { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
   { key: '/risks', icon: <AlertOutlined />, label: '风险管理' },
   { key: '/risk-alerts', icon: <WarningOutlined />, label: '风险预警' },
   { key: '/admin', icon: <SettingOutlined />, label: '系统管理' },

@@ -18,23 +18,37 @@ const { Title, Text } = Typography;
 
 interface TeamPerformance {
   completionRate: number;
-  avgOutput: number;
-  onTimeRate: number;
-  totalTasks: number;
-  completedTasks: number;
+  avgTasksPerUser: number;
+  onTimeDeliveryRate: number;
+  avgResponseTime: number;
+  riskResolutionRate: number;
+  summary: {
+    totalTasks: number;
+    completedTasks: number;
+    inProgressTasks: number;
+    pendingTasks: number;
+    totalRisks: number;
+    resolvedRisks: number;
+    criticalRisks: number;
+  };
 }
 
 interface MemberPerformance {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  completedTasks: number;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+    role: string;
+  };
+  taskCompletionCount: number;
   totalTasks: number;
-  completionRate: number;
-  onTimeRate: number;
-  avgDuration: number;
-  skills: string[];
+  onTimeCompletionRate: number;
+  avgResponseTime: number;
+  riskHandlingCount: number;
+  riskResolutionRate: number;
+  collaborationScore: number;
+  performanceScore: number;
 }
 
 interface TrendData {
@@ -198,20 +212,19 @@ export default function Performance() {
   const columns = [
     {
       title: '成员',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string, record: MemberPerformance) => (
+      key: 'member',
+      render: (_: any, record: MemberPerformance) => (
         <Space>
           <Avatar 
             size={36} 
-            src={record.avatar} 
+            src={record.user.avatar} 
             icon={<UserOutlined />}
             style={{ background: 'var(--gradient-primary)' }}
           />
           <div>
-            <Text strong>{text}</Text>
+            <Text strong>{record.user.name}</Text>
             <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>{record.email}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>{record.user.email}</Text>
           </div>
         </Space>
       )
@@ -223,10 +236,10 @@ export default function Performance() {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text type="secondary" style={{ fontSize: 12 }}>完成进度</Text>
-            <Text strong style={{ fontSize: 12 }}>{record.completedTasks}/{record.totalTasks}</Text>
+            <Text strong style={{ fontSize: 12 }}>{record.taskCompletionCount}/{record.totalTasks}</Text>
           </div>
           <Progress 
-            percent={record.completionRate} 
+            percent={record.totalTasks > 0 ? Math.round((record.taskCompletionCount / record.totalTasks) * 100) : 0} 
             strokeColor={{
               '0%': '#6366f1',
               '100%': '#8b5cf6',
@@ -240,8 +253,8 @@ export default function Performance() {
     },
     {
       title: '按时交付率',
-      dataIndex: 'onTimeRate',
-      key: 'onTimeRate',
+      dataIndex: 'onTimeCompletionRate',
+      key: 'onTimeCompletionRate',
       render: (rate: number) => (
         <Tag color={rate >= 80 ? 'green' : rate >= 60 ? 'orange' : 'red'}>
           {rate}%
@@ -249,22 +262,19 @@ export default function Performance() {
       )
     },
     {
-      title: '平均完成时长',
-      dataIndex: 'avgDuration',
-      key: 'avgDuration',
-      render: (duration: number) => `${duration}天`
+      title: '平均响应时长',
+      dataIndex: 'avgResponseTime',
+      key: 'avgResponseTime',
+      render: (duration: number) => `${duration.toFixed(1)}天`
     },
     {
-      title: '技能标签',
-      dataIndex: 'skills',
-      key: 'skills',
-      render: (skills: string[]) => (
-        <Space wrap size={[4, 4]}>
-          {skills.slice(0, 3).map(skill => (
-            <Tag key={skill} style={{ margin: 0, borderRadius: 12 }}>{skill}</Tag>
-          ))}
-          {skills.length > 3 && <Tag>+{skills.length - 3}</Tag>}
-        </Space>
+      title: '绩效评分',
+      dataIndex: 'performanceScore',
+      key: 'performanceScore',
+      render: (score: number) => (
+        <Tag color={score >= 80 ? 'green' : score >= 60 ? 'blue' : 'orange'}>
+          {score.toFixed(1)}
+        </Tag>
       )
     }
   ];
@@ -302,28 +312,28 @@ export default function Performance() {
           <div className="stat-icon">
             <CheckCircleOutlined />
           </div>
-          <div className="stat-value">{teamPerformance?.completionRate || 0}%</div>
+          <div className="stat-value">{teamPerformance?.completionRate?.toFixed(1) || 0}%</div>
           <div className="stat-label">任务完成率</div>
         </div>
         <div className="stat-card stat-success">
           <div className="stat-icon">
             <TrophyOutlined />
           </div>
-          <div className="stat-value">{teamPerformance?.avgOutput || 0}</div>
-          <div className="stat-label">人均产出</div>
+          <div className="stat-value">{teamPerformance?.avgTasksPerUser?.toFixed(1) || 0}</div>
+          <div className="stat-label">人均任务数</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">
             <ClockCircleOutlined />
           </div>
-          <div className="stat-value">{teamPerformance?.onTimeRate || 0}%</div>
+          <div className="stat-value">{teamPerformance?.onTimeDeliveryRate?.toFixed(1) || 0}%</div>
           <div className="stat-label">按时交付率</div>
         </div>
         <div className="stat-card stat-danger">
           <div className="stat-icon">
             <TeamOutlined />
           </div>
-          <div className="stat-value">{teamPerformance?.totalTasks || 0}</div>
+          <div className="stat-value">{teamPerformance?.summary?.totalTasks || 0}</div>
           <div className="stat-label">总任务数</div>
         </div>
       </div>
@@ -361,7 +371,7 @@ export default function Performance() {
             <Table
               columns={columns}
               dataSource={members}
-              rowKey="id"
+              rowKey={(record) => record.user.id}
               rowSelection={{
                 selectedRowKeys: selectedMembers,
                 onChange: (keys) => setSelectedMembers(keys as string[])

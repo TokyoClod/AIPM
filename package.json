@@ -1,6 +1,6 @@
 {
   "name": "ai-project-manager",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "多人协作项目管理平台",
   "private": true,
   "scripts": {

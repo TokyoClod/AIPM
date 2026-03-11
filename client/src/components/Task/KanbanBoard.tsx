@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Tag, Progress, Modal, Form, Input, Select, DatePicker, Slider, Row, Col, message, Empty } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, DragOutlined } from '@ant-design/icons';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -49,7 +49,7 @@ function SortableTaskCard({ task, onEdit }: TaskCardProps) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style}>
       <div 
         className={`task-card priority-${task.priority} ${task.status === 'completed' ? 'status-completed' : ''}`}
         onClick={() => onEdit(task)}
@@ -74,6 +74,20 @@ function SortableTaskCard({ task, onEdit }: TaskCardProps) {
         <div className="task-meta" style={{ marginTop: 8 }}>
           {task.assignee_name && <span>👤 {task.assignee_name}</span>}
           {task.end_date && <span>📅 {dayjs(task.end_date).format('MM-DD')}</span>}
+        </div>
+        <div 
+          {...attributes} 
+          {...listeners}
+          style={{ 
+            position: 'absolute', 
+            top: 8, 
+            right: 8, 
+            cursor: 'grab',
+            padding: '4px 8px',
+            color: '#999'
+          }}
+        >
+          <DragOutlined />
         </div>
       </div>
     </div>

@@ -12,13 +12,15 @@ router.get('/', checkPermission('project:view'), (req: AuthRequest, res: Respons
   try {
     const { project_id, status, assignee_id, parent_id } = req.query;
 
-    let tasks = project_id ? db.tasks.findByProject(project_id as string) : [];
+    let tasks = project_id 
+      ? db.tasks.findByProject(project_id as string) 
+      : db.tasks.getAll();
 
     if (status) tasks = tasks.filter(t => t.status === status);
     if (assignee_id) tasks = tasks.filter(t => t.assignee_id === assignee_id);
     if (parent_id) {
       tasks = tasks.filter(t => t.parent_id === parent_id);
-    } else if (!project_id) {
+    } else if (project_id) {
       tasks = tasks.filter(t => !t.parent_id);
     }
 

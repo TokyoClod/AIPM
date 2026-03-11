@@ -23,11 +23,12 @@ interface Knowledge {
   content: string;
   category: string;
   tags: string[];
-  author_id: string;
-  author_name: string;
+  creator_id: string;
+  creator_name: string;
   created_at: string;
   updated_at: string;
-  project_links?: { id: string; name: string }[];
+  view_count?: number;
+  projects?: { id: string; name: string }[];
 }
 
 interface Category {
@@ -72,16 +73,16 @@ export default function Knowledge() {
       ]);
       
       if (listRes.data.success) {
-        setKnowledgeList(listRes.data.data);
+        setKnowledgeList(listRes.data.data.list || []);
       }
       if (categoriesRes.data.success) {
-        setCategories(categoriesRes.data.data);
+        setCategories(categoriesRes.data.data || []);
       }
       if (tagsRes.data.success) {
-        setTags(tagsRes.data.data);
+        setTags(tagsRes.data.data || []);
       }
       if (projectsRes.data.success) {
-        setProjects(projectsRes.data.data);
+        setProjects(projectsRes.data.data || []);
       }
     } catch (error) {
       console.error('Failed to load knowledge data');
@@ -100,7 +101,7 @@ export default function Knowledge() {
     try {
       const res = await knowledgeApi.search(searchKeyword);
       if (res.data.success) {
-        setKnowledgeList(res.data.data);
+        setKnowledgeList(res.data.data || []);
       }
     } catch (error) {
       message.error('搜索失败');
@@ -236,8 +237,8 @@ export default function Knowledge() {
     },
     {
       title: '作者',
-      dataIndex: 'author_name',
-      key: 'author_name'
+      dataIndex: 'creator_name',
+      key: 'creator_name'
     },
     {
       title: '更新时间',
@@ -473,7 +474,7 @@ export default function Knowledge() {
                   ))}
                 </Space>
               </Descriptions.Item>
-              <Descriptions.Item label="作者">{currentKnowledge.author_name}</Descriptions.Item>
+              <Descriptions.Item label="作者">{currentKnowledge.creator_name}</Descriptions.Item>
               <Descriptions.Item label="创建时间">
                 {dayjs(currentKnowledge.created_at).format('YYYY-MM-DD HH:mm')}
               </Descriptions.Item>
@@ -494,11 +495,11 @@ export default function Knowledge() {
               {currentKnowledge.content}
             </div>
 
-            {currentKnowledge.project_links && currentKnowledge.project_links.length > 0 && (
+            {currentKnowledge.projects && currentKnowledge.projects.length > 0 && (
               <>
                 <Divider>关联项目</Divider>
                 <Space wrap>
-                  {currentKnowledge.project_links.map(project => (
+                  {currentKnowledge.projects.map(project => (
                     <Tag key={project.id} color="purple" icon={<LinkOutlined />}>
                       {project.name}
                     </Tag>

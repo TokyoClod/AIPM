@@ -81,6 +81,16 @@
 - **修复**: 添加 `label.formatter` 显示数量和百分比
 - **文件**: `client/src/pages/ProjectDetail.tsx`
 
+##### 8. 绩效仪表盘缺失图标导入
+- **问题**: `CompareOutlined` 图标未导入导致页面报错
+- **修复**: 添加图标导入
+- **文件**: `client/src/pages/Performance.tsx`
+
+##### 9. 绩效趋势数据字段不匹配
+- **问题**: 后端返回 `period`/`totalTasks`，前端期望 `date`/`taskCount`
+- **修复**: 更新前端接口定义和数据映射
+- **文件**: `client/src/pages/Performance.tsx`
+
 ### v1.5.0 (2026-03-11)
 
 #### 新增功能
